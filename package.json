@@ -1,0 +1,10 @@
+{
+  "license": "BSD-3-Clause",
+  "scripts": {
+    "postinstall": "elm-tooling install"
+  },
+  "devDependencies": {
+    "elm-review": "^2.7.2",
+    "elm-tooling": "^1.8.0"
+  }
+}
