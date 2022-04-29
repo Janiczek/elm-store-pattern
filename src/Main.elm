@@ -116,7 +116,6 @@ view model =
 
                 _ ->
                     Html.todo <| Debug.toString model.route
-            , Html.debug model
             ]
         ]
     }
