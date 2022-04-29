@@ -25,8 +25,8 @@ type alias PostId =
 getAll : (Result Http.Error (List Post) -> msg) -> Cmd msg
 getAll toMsg =
     Http.mockSuccess
-        [ Post "1" "First post" "42"
-        , Post "2" "Second post" "999"
-        , Post "4" "Some other post" "42"
+        [ Post "1" "First" "42"
+        , Post "2" "Second" "999"
+        , Post "4" "Other" "42"
         ]
         toMsg

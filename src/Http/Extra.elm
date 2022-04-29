@@ -1,4 +1,8 @@
-module Http.Extra exposing (mockFail, mockSuccess)
+module Http.Extra exposing
+    ( mockFailDecoderError
+    , mockFailNetworkError
+    , mockSuccess
+    )
 
 import Http
 import Process
@@ -10,12 +14,22 @@ mockSuccess value toMsg =
     emitWithDelay (toMsg (Ok value))
 
 
-mockFail : Http.Error -> (Result Http.Error a -> msg) -> Cmd msg
-mockFail err toMsg =
-    emitWithDelay (toMsg (Err err))
+mockFailNetworkError : (Result Http.Error a -> msg) -> Cmd msg
+mockFailNetworkError toMsg =
+    emitWithDelay (toMsg (Err Http.NetworkError))
+
+
+mockFailDecoderError : (Result Http.Error a -> msg) -> Cmd msg
+mockFailDecoderError toMsg =
+    emitWithDelay
+        (toMsg (Err <| Http.BadBody (Debug.todo "flesh this out")))
 
 
 emitWithDelay : msg -> Cmd msg
 emitWithDelay msg =
-    Process.sleep 2000
-        |> Task.perform (\() -> msg)
+    let
+        _ =
+            Debug.log "mock request" msg
+    in
+    Process.sleep 1000
+        |> Task.perform (\() -> Debug.log "mock response" msg)

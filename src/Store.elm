@@ -12,7 +12,7 @@ module Store exposing
 
 -}
 
-import API.Image exposing (Image, ImageId)
+import API.Image exposing (Image, ImageCreateData, ImageId)
 import API.Post exposing (Post, PostId)
 import API.User exposing (User, UserId)
 import Cmd.Extra as Cmd
@@ -30,7 +30,7 @@ type alias Store =
       users : Dict UserId (WebData User)
     , -- images: lazy-loaded per user, but all at once
       -- GET /api/users/<ID>/images
-      imagesForUser : Dict UserId (WebData (Dict ImageId Image))
+      userImages : Dict UserId (WebData (Dict ImageId Image))
     }
 
 
@@ -39,8 +39,8 @@ type alias Store =
 type Action
     = GetPosts
     | GetUser UserId
-    | GetImagesForUser UserId
-    | CreateImage UserId Image
+    | GetUserImages UserId
+    | CreateImage ImageCreateData
 
 
 {-| As in, Response
@@ -49,15 +49,15 @@ type Msg
     = HttpError Action Http.Error -- !
     | GotPosts (List Post)
     | GotUser UserId User
-    | GotImagesForUser UserId (List Image)
-    | CreatedImage UserId Image
+    | GotUserImages UserId (List Image)
+    | CreatedImage Image
 
 
 init : Store
 init =
     { posts = NotAsked
     , users = Dict.empty
-    , imagesForUser = Dict.empty
+    , userImages = Dict.empty
     }
 
 
@@ -74,13 +74,27 @@ runAction action store =
                 ( store, Cmd.none )
 
         GetUser userId ->
-            Debug.todo "Store.runAction getUser"
+            if shouldSendRequest (getWebData userId store.users) then
+                ( { store | users = Dict.insert userId Loading store.users }
+                , send action (API.User.get userId) (GotUser userId)
+                )
 
-        GetImagesForUser userId ->
-            Debug.todo "Store.runAction getImagesForUser"
+            else
+                ( store, Cmd.none )
 
-        CreateImage userId image ->
-            Debug.todo "Store.runAction createImage"
+        GetUserImages userId ->
+            if shouldSendRequest (getWebData userId store.userImages) then
+                ( { store | userImages = Dict.insert userId Loading store.userImages }
+                , send action (API.Image.getAllForUser userId) (GotUserImages userId)
+                )
+
+            else
+                ( store, Cmd.none )
+
+        CreateImage imageCreateData ->
+            ( store
+            , send action (API.Image.create imageCreateData) CreatedImage
+            )
 
 
 runActions : List Action -> Store -> ( Store, Cmd Msg )
@@ -110,6 +124,12 @@ shouldSendRequest webdata =
             False
 
 
+getWebData : comparable -> Dict comparable (WebData a) -> WebData a
+getWebData key dict =
+    Dict.get key dict
+        |> Maybe.withDefault NotAsked
+
+
 send : Action -> ((Result Http.Error a -> Msg) -> Cmd Msg) -> (a -> Msg) -> Cmd Msg
 send action toCmd toSuccessMsg =
     toCmd
@@ -132,13 +152,19 @@ update msg store =
             )
 
         GotUser userId user ->
-            Debug.todo "Store.update gotUser"
+            ( { store | users = Dict.insert userId (Success user) store.users }
+            , Cmd.none
+            )
 
-        GotImagesForUser userId images ->
-            Debug.todo "Store.update gotImages"
+        GotUserImages userId images ->
+            ( { store | userImages = Dict.insert userId (Success (dictByIds images)) store.userImages }
+            , Cmd.none
+            )
 
-        CreatedImage userId image ->
-            Debug.todo "Store.update created image"
+        CreatedImage image ->
+            -- We arbitrarily decide to reload user's images after getting the success.
+            store
+                |> runAction (GetUserImages image.owner)
 
         HttpError action error ->
             Debug.todo "Store.update http error"

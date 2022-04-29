@@ -8,11 +8,11 @@ import Url.Parser exposing ((</>), Parser)
 
 
 type Route
-    = PostsList
-    | PostDetail PostId
-    | UserDetail UserId
-    | UserImages UserId
-    | NotFound
+    = PostsRoute
+    | PostRoute PostId
+    | UserRoute UserId
+    | UserImagesRoute UserId
+    | NotFoundRoute
 
 
 toString : Route -> String
@@ -20,19 +20,19 @@ toString route =
     let
         segments =
             case route of
-                PostsList ->
+                PostsRoute ->
                     [ "posts" ]
 
-                PostDetail postId ->
+                PostRoute postId ->
                     [ "posts", postId ]
 
-                UserDetail userId ->
+                UserRoute userId ->
                     [ "users", userId ]
 
-                UserImages userId ->
+                UserImagesRoute userId ->
                     [ "users", userId, "images" ]
 
-                NotFound ->
+                NotFoundRoute ->
                     [ "not-found" ]
     in
     Url.Builder.absolute segments []
@@ -41,16 +41,16 @@ toString route =
 fromUrl : Url -> Route
 fromUrl url =
     Url.Parser.parse parser url
-        |> Maybe.withDefault NotFound
+        |> Maybe.withDefault NotFoundRoute
 
 
 parser : Parser (Route -> Route) Route
 parser =
     Url.Parser.oneOf
-        [ Url.Parser.map PostsList Url.Parser.top
-        , Url.Parser.map PostsList <| Url.Parser.s "posts"
-        , Url.Parser.map PostDetail <| Url.Parser.s "posts" </> Url.Parser.string
-        , Url.Parser.map UserDetail <| Url.Parser.s "users" </> Url.Parser.string
-        , Url.Parser.map UserImages <| Url.Parser.s "users" </> Url.Parser.string </> Url.Parser.s "images"
-        , Url.Parser.map NotFound <| Url.Parser.s "not-found"
+        [ Url.Parser.map PostsRoute Url.Parser.top
+        , Url.Parser.map PostsRoute <| Url.Parser.s "posts"
+        , Url.Parser.map PostRoute <| Url.Parser.s "posts" </> Url.Parser.string
+        , Url.Parser.map UserRoute <| Url.Parser.s "users" </> Url.Parser.string
+        , Url.Parser.map UserImagesRoute <| Url.Parser.s "users" </> Url.Parser.string </> Url.Parser.s "images"
+        , Url.Parser.map NotFoundRoute <| Url.Parser.s "not-found"
         ]

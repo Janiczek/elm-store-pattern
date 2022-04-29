@@ -4,7 +4,7 @@ COLOR_OFF="\e[0m";
 DIM="\e[2m";
 
 function compile {
-  find src -type f -name '*.elm' | xargs elm make
+  find src -type f -name '*.elm' | xargs elm make --output=/dev/null
 }
 
 function run {
