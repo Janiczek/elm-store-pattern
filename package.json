@@ -1,9 +1,12 @@
 {
   "license": "BSD-3-Clause",
   "scripts": {
-    "postinstall": "elm-tooling install"
+    "postinstall": "elm-tooling install",
+    "build": "elm make src/Main.elm --output=elm.js",
+    "start": "elm-live src/Main.elm --hot --open -- --output=elm.js"
   },
   "devDependencies": {
+    "elm-live": "^4.0.2",
     "elm-review": "^2.7.2",
     "elm-tooling": "^1.8.0"
   }
