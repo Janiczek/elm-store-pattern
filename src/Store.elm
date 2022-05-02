@@ -1,24 +1,25 @@
 module Store exposing
     ( Store, init
-    , Action(..), runAction, runActions
+    , Action(..), runActions
     , Msg, update
     )
 
 {-|
 
 @docs Store, init
-@docs Action, runAction, runActions
+@docs Action, runActions
 @docs Msg, update
 
 -}
 
-import API.Image exposing (Image, ImageCreateData, ImageId)
-import API.Post exposing (Post, PostId)
+import API.Image exposing (Image, ImageId)
+import API.Post exposing (Post, PostCreateData, PostId)
 import API.User exposing (User, UserId)
 import Cmd.Extra as Cmd
 import Dict exposing (Dict)
 import Http
 import RemoteData exposing (RemoteData(..), WebData)
+import RemoteData.Extra as RemoteData
 
 
 type alias Store =
@@ -40,7 +41,7 @@ type Action
     = GetPosts
     | GetUsers
     | GetImage ImageId
-    | CreateImage ImageCreateData
+    | CreatePost PostCreateData
 
 
 {-| As in, Response
@@ -50,7 +51,7 @@ type Msg
     | GotPosts (List Post)
     | GotUsers (List User)
     | GotImage Image
-    | CreatedImage Image
+    | CreatedPost Post
 
 
 init : Store
@@ -83,7 +84,7 @@ runAction action store =
                 ( store, Cmd.none )
 
         GetImage imageId ->
-            if shouldSendRequest (getWebData imageId store.images) then
+            if shouldSendRequest (RemoteData.get_ imageId store.images) then
                 ( { store | images = Dict.insert imageId Loading store.images }
                 , send action (API.Image.get imageId) GotImage
                 )
@@ -91,9 +92,9 @@ runAction action store =
             else
                 ( store, Cmd.none )
 
-        CreateImage imageCreateData ->
+        CreatePost postCreateData ->
             ( store
-            , send action (API.Image.create imageCreateData) CreatedImage
+            , send action (API.Post.create postCreateData) CreatedPost
             )
 
 
@@ -122,12 +123,6 @@ shouldSendRequest webdata =
 
         Success _ ->
             False
-
-
-getWebData : comparable -> Dict comparable (WebData a) -> WebData a
-getWebData key dict =
-    Dict.get key dict
-        |> Maybe.withDefault NotAsked
 
 
 send : Action -> ((Result Http.Error a -> Msg) -> Cmd Msg) -> (a -> Msg) -> Cmd Msg
@@ -161,8 +156,8 @@ update msg store =
             , Cmd.none
             )
 
-        CreatedImage image ->
-            ( { store | images = Dict.insert image.id (Success image) store.images }
+        CreatedPost post ->
+            ( { store | posts = RemoteData.map (Dict.insert post.id post) store.posts }
             , Cmd.none
             )
 
@@ -184,7 +179,7 @@ saveFailure action err store =
         GetImage imageId ->
             { store | images = Dict.insert imageId (Failure err) store.images }
 
-        CreateImage _ ->
+        CreatePost _ ->
             store
 
 

@@ -1,6 +1,6 @@
-module Page.Posts exposing (Model, dataRequests, init, view)
+module Page.Posts exposing (Config, dataRequests, view)
 
-import API.Post exposing (Post, PostId)
+import API.Post exposing (Post, PostCreateData, PostId)
 import API.User exposing (User, UserId)
 import Dict exposing (Dict)
 import Html exposing (Html)
@@ -14,15 +14,6 @@ import Store exposing (Store)
 import UI
 
 
-type alias Model =
-    {}
-
-
-init : Model
-init =
-    {}
-
-
 dataRequests : List Store.Action
 dataRequests =
     [ Store.GetPosts
@@ -30,8 +21,13 @@ dataRequests =
     ]
 
 
-view : Store -> Model -> Html msg
-view store model =
+type alias Config msg =
+    { createPost : PostCreateData -> msg
+    }
+
+
+view : Config msg -> Store -> Html msg
+view config store =
     Html.div
         []
         [ Html.h1
@@ -41,32 +37,71 @@ view store model =
             \posts ->
                 RemoteData.view "Users" store.users <|
                     \users ->
-                        postsView posts users
+                        postsView config posts users
         ]
 
 
-postsView : Dict PostId Post -> Dict UserId User -> Html msg
-postsView posts users =
-    Html.table []
-        [ Html.thead []
-            [ Html.tr []
-                ([ "ID"
-                 , "Title"
-                 , "Author"
-                 ]
-                    |> List.map
-                        (\title ->
-                            Html.th
-                                [ Attrs.class UI.th ]
-                                [ Html.text title ]
-                        )
+postsView : Config msg -> Dict PostId Post -> Dict UserId User -> Html msg
+postsView config posts users =
+    Html.div
+        [ Attrs.class "flex flex-col gap-2" ]
+        [ Html.table [ Attrs.class "w-min" ]
+            [ Html.thead []
+                [ Html.tr []
+                    ([ "ID"
+                     , "Title"
+                     , "Author"
+                     ]
+                        |> List.map
+                            (\title ->
+                                Html.th
+                                    [ Attrs.class UI.th ]
+                                    [ Html.text title ]
+                            )
+                    )
+                ]
+            , Html.tbody []
+                (posts
+                    |> Dict.values
+                    |> List.map (postRowView users)
                 )
             ]
-        , Html.tbody []
-            (posts
-                |> Dict.values
-                |> List.map (postRowView users)
-            )
+        , Html.div
+            [ Attrs.class "flex flex-row gap-2" ]
+            [ Html.button
+                [ Events.onClick
+                    (config.createPost
+                        { title = "A"
+                        , authorId = "4"
+                        , content = "I am A!"
+                        }
+                    )
+                , Attrs.class UI.button
+                ]
+                [ Html.text "Create post A" ]
+            , Html.button
+                [ Events.onClick
+                    (config.createPost
+                        { title = "B"
+                        , authorId = "42"
+                        , content = "B side"
+                        }
+                    )
+                , Attrs.class UI.button
+                ]
+                [ Html.text "Create post B" ]
+            , Html.button
+                [ Events.onClick
+                    (config.createPost
+                        { title = "C"
+                        , authorId = "999"
+                        , content = "C C C C C"
+                        }
+                    )
+                , Attrs.class UI.button
+                ]
+                [ Html.text "Create post C" ]
+            ]
         ]
 
 
@@ -80,7 +115,7 @@ postRowView users post =
                 ]
                 [ Html.a
                     [ Attrs.href (Route.toString route)
-                    , Attrs.class "underline text-blue-600"
+                    , Attrs.class UI.a
                     ]
                     [ Html.text text ]
                 ]

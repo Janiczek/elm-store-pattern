@@ -1,5 +1,7 @@
 module Http.Extra exposing
-    ( mockFailDecoderError
+    (  mockFailBadRequestError
+       --, TODO mockFailDecoderError
+
     , mockFailNetworkError
     , mockSuccess
     )
@@ -21,10 +23,10 @@ mockFailNetworkError delay toMsg =
         (toMsg (Err Http.NetworkError))
 
 
-mockFailDecoderError : Float -> (Result Http.Error a -> msg) -> Cmd msg
-mockFailDecoderError delay toMsg =
+mockFailBadRequestError : Float -> (Result Http.Error a -> msg) -> Cmd msg
+mockFailBadRequestError delay toMsg =
     emitWithDelay delay
-        (toMsg (Err <| Http.BadBody (Debug.todo "flesh this out")))
+        (toMsg (Err <| Http.BadStatus 400))
 
 
 emitWithDelay : Float -> msg -> Cmd msg

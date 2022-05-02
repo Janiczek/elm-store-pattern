@@ -1,4 +1,4 @@
-module Page.User exposing (Model, dataRequests, init, view)
+module Page.User exposing (dataRequests, view)
 
 import API.Post exposing (Post, PostId)
 import API.User exposing (User, UserId)
@@ -12,15 +12,6 @@ import Store exposing (Store)
 import UI
 
 
-type alias Model =
-    {}
-
-
-init : Model
-init =
-    {}
-
-
 dataRequests : Store -> UserId -> List Store.Action
 dataRequests store userId =
     [ Store.GetPosts
@@ -28,8 +19,8 @@ dataRequests store userId =
     ]
 
 
-view : Store -> UserId -> Model -> Html msg
-view store userId model =
+view : Store -> UserId -> Html msg
+view store userId =
     let
         title : String
         title =

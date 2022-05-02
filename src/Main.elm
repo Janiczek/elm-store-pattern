@@ -1,15 +1,17 @@
-module Main exposing (main)
+module Main exposing (Flags, Model, Msg, main)
 
+import API.Post exposing (PostCreateData)
 import Browser
 import Browser.Navigation
+import Cmd.Extra as Cmd
 import Dict exposing (Dict)
 import Html exposing (Html)
 import Html.Attributes as Attrs
-import Html.Extra as Html
 import Page.Post
 import Page.Posts
 import Page.User
-import RemoteData exposing (WebData)
+import RemoteData exposing (RemoteData(..), WebData)
+import RemoteData.Extra as RemoteData
 import Route exposing (Route(..))
 import Store exposing (Store)
 import UI
@@ -36,9 +38,6 @@ type alias Model =
     { store : Store
     , route : Route
     , navKey : Browser.Navigation.Key
-    , postsPage : Page.Posts.Model
-    , postPage : Page.Post.Model
-    , userPage : Page.User.Model
     }
 
 
@@ -46,31 +45,44 @@ type Msg
     = StoreMsg Store.Msg
     | UrlChanged Url
     | UrlRequested Browser.UrlRequest
+    | CreatePost PostCreateData
 
 
 init : Flags -> Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
 init () url navKey =
     let
+        route : Route
         route =
             Route.fromUrl url
 
-        initStore =
+        store : Store
+        store =
             Store.init
 
+        requests : List Store.Action
         requests =
-            dataRequests initStore route
+            dataRequests store route
+    in
+    { store = store
+    , route = route
+    , navKey = navKey
+    }
+        |> sendDataRequests requests
 
-        ( store, storeCmd ) =
-            initStore
+
+sendDataRequest : Store.Action -> Model -> ( Model, Cmd Msg )
+sendDataRequest request model =
+    sendDataRequests [ request ] model
+
+
+sendDataRequests : List Store.Action -> Model -> ( Model, Cmd Msg )
+sendDataRequests requests model =
+    let
+        ( newStore, storeCmd ) =
+            model.store
                 |> Store.runActions requests
     in
-    ( { store = store
-      , route = route
-      , navKey = navKey
-      , postsPage = Page.Posts.init
-      , postPage = Page.Post.init
-      , userPage = Page.User.init
-      }
+    ( { model | store = newStore }
     , Cmd.map StoreMsg storeCmd
     )
 
@@ -82,19 +94,30 @@ update msg model =
             let
                 ( newStore, storeCmd ) =
                     Store.update storeMsg model.store
+
+                requests : List Store.Action
+                requests =
+                    dataRequests newStore model.route
             in
             ( { model | store = newStore }
             , Cmd.map StoreMsg storeCmd
             )
+                |> Cmd.andThen (sendDataRequests requests)
 
         UrlChanged url ->
             let
-                route =
+                newRoute : Route
+                newRoute =
                     Route.fromUrl url
+
+                requests : List Store.Action
+                requests =
+                    dataRequests model.store newRoute
             in
-            ( { model | route = route }
+            ( { model | route = newRoute }
             , Cmd.none
             )
+                |> Cmd.andThen (sendDataRequests requests)
 
         UrlRequested request ->
             case request of
@@ -103,6 +126,10 @@ update msg model =
 
                 Browser.External urlString ->
                     ( model, Browser.Navigation.load urlString )
+
+        CreatePost data ->
+            model
+                |> sendDataRequest (Store.CreatePost data)
 
 
 dataRequests : Store -> Route -> List Store.Action
@@ -122,8 +149,14 @@ dataRequests store route =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     Sub.none
+
+
+postsPageConfig : Page.Posts.Config Msg
+postsPageConfig =
+    { createPost = CreatePost
+    }
 
 
 view : Model -> Browser.Document Msg
@@ -133,16 +166,16 @@ view model =
         [ Html.div
             [ Attrs.class "p-4 gap-4 flex flex-col" ]
             [ storeLoadView model.store
-            , navView model.route
+            , navView model.store model.route
             , case model.route of
                 PostsRoute ->
-                    Page.Posts.view model.store model.postsPage
+                    Page.Posts.view postsPageConfig model.store
 
                 PostRoute postId ->
-                    Page.Post.view model.store postId model.postPage
+                    Page.Post.view model.store postId
 
                 UserRoute userId ->
-                    Page.User.view model.store userId model.userPage
+                    Page.User.view model.store userId
 
                 NotFoundRoute ->
                     Html.text "Page not found"
@@ -151,8 +184,8 @@ view model =
     }
 
 
-navView : Route -> Html Msg
-navView currentRoute =
+navView : Store -> Route -> Html Msg
+navView store currentRoute =
     let
         routeLabel : Route -> String
         routeLabel route =
@@ -161,10 +194,18 @@ navView currentRoute =
                     "All Posts"
 
                 PostRoute id ->
-                    "Post #" ++ id
+                    "Post "
+                        ++ (RemoteData.get id store.posts
+                                |> RemoteData.map (\{ title } -> "\"" ++ title ++ "\"")
+                                |> RemoteData.withDefault ("#" ++ id)
+                           )
 
                 UserRoute id ->
-                    "User #" ++ id
+                    "User "
+                        ++ (RemoteData.get id store.users
+                                |> RemoteData.map .name
+                                |> RemoteData.withDefault ("#" ++ id)
+                           )
 
                 NotFoundRoute ->
                     "Not Found"
@@ -189,8 +230,8 @@ navView currentRoute =
                             Html.a
                                 [ Attrs.href (Route.toString route)
                                 , Attrs.classList
-                                    [ ( "text-blue-600", True )
-                                    , ( "font-bold border-b-2", route == currentRoute )
+                                    [ ( UI.a, True )
+                                    , ( "font-bold", route == currentRoute )
                                     ]
                                 ]
                                 [ Html.text (routeLabel route) ]
@@ -209,52 +250,46 @@ storeLoadView store =
                 , Html.td [ Attrs.class UI.td ] [ Html.text content ]
                 ]
 
+        webdataSquare : WebData a -> String
+        webdataSquare data =
+            case data of
+                NotAsked ->
+                    "⬜️"
+
+                Loading ->
+                    "🟨"
+
+                Failure _ ->
+                    "🟥"
+
+                Success _ ->
+                    "🟩"
+
         webdataDict : String -> WebData (Dict comparable a) -> Html msg
         webdataDict label data =
             row label
-                (data
-                    |> RemoteData.map (\dict_ -> "Dict (" ++ String.fromInt (Dict.size dict_) ++ " items)")
-                    |> Debug.toString
+                (webdataSquare data
+                    ++ (data
+                            |> RemoteData.map (\dict_ -> " Dict (" ++ String.fromInt (Dict.size dict_) ++ " items)")
+                            |> RemoteData.withDefault ""
+                       )
                 )
 
         dictWebdata : String -> Dict comparable (WebData a) -> Html msg
         dictWebdata label dict =
             let
-                size : Int
-                size =
-                    Dict.size dict
-
-                count : String -> (WebData a -> Bool) -> Maybe String
-                count label_ pred =
-                    let
-                        n : Int
-                        n =
-                            dict
-                                |> Dict.filter (always pred)
-                                |> Dict.size
-                    in
-                    if n == 0 then
-                        Nothing
+                contents : String
+                contents =
+                    if Dict.isEmpty dict then
+                        "empty"
 
                     else
-                        Just (label_ ++ ": " ++ String.fromInt n ++ "x")
-
-                counts : String
-                counts =
-                    if size == 0 then
-                        ""
-
-                    else
-                        [ count "NotAsked" RemoteData.isNotAsked
-                        , count "Loading" RemoteData.isLoading
-                        , count "Failure" RemoteData.isFailure
-                        , count "Success" RemoteData.isSuccess
-                        ]
-                            |> List.filterMap identity
-                            |> String.join ", "
-                            |> (\s -> ": " ++ s)
+                        dict
+                            |> Dict.values
+                            |> List.map webdataSquare
+                            |> String.concat
             in
-            row label ("Dict (" ++ String.fromInt size ++ " items" ++ counts ++ ")")
+            row label ("Dict (" ++ contents ++ ")")
     in
     Html.div
         [ Attrs.class "text-slate-400" ]

@@ -3,7 +3,6 @@ module Html.Extra exposing (debug, spinner, todo)
 import DebugToJson
 import Html exposing (Html)
 import Html.Attributes as Attrs
-import RemoteData exposing (RemoteData(..), WebData)
 import Svg
 import Svg.Attributes as SvgAttrs
 

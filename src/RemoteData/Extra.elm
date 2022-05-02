@@ -1,4 +1,4 @@
-module RemoteData.Extra exposing (get, view)
+module RemoteData.Extra exposing (get, get_, traverse, view)
 
 import Dict exposing (Dict)
 import Html exposing (Html)
@@ -36,3 +36,17 @@ get key data =
                     |> RemoteData.fromMaybe
                         (Http.BadBody ("key '" ++ Debug.toString key ++ "' not found"))
             )
+
+
+get_ : comparable -> Dict comparable (WebData a) -> WebData a
+get_ key dict =
+    Dict.get key dict
+        |> Maybe.withDefault (Failure (Http.BadBody ("key '" ++ Debug.toString key ++ "' not found")))
+
+
+traverse : (a -> RemoteData x b) -> List a -> RemoteData x (List b)
+traverse fn list =
+    List.foldl
+        (\x acc -> RemoteData.map2 (::) (fn x) acc)
+        (Success [])
+        list
