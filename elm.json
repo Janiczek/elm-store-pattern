@@ -12,6 +12,7 @@
             "elm/http": "2.0.0",
             "elm/svg": "1.0.1",
             "elm/url": "1.0.0",
+            "emilianobovetti/elm-toast": "1.0.1",
             "f0i/debug-to-json": "1.0.6",
             "krisajenkins/remotedata": "6.0.1"
         },

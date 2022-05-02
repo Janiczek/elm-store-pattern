@@ -5,8 +5,10 @@ import Browser
 import Browser.Navigation
 import Cmd.Extra as Cmd
 import Dict exposing (Dict)
-import Html exposing (Html)
+import Html exposing (Attribute, Html)
 import Html.Attributes as Attrs
+import Html.Extra as Html
+import Http
 import Page.Post
 import Page.Posts
 import Page.User
@@ -14,7 +16,9 @@ import RemoteData exposing (RemoteData(..), WebData)
 import RemoteData.Extra as RemoteData
 import Route exposing (Route(..))
 import Store exposing (Store)
+import Toast
 import UI
+import UI.Toast
 import Url exposing (Url)
 
 
@@ -34,15 +38,23 @@ type alias Flags =
     ()
 
 
+type Toast
+    = StoreActionSent Store.Action
+    | StoreActionSuccess Store.Action
+    | StoreActionFailure Store.Action Http.Error
+
+
 type alias Model =
     { store : Store
     , route : Route
     , navKey : Browser.Navigation.Key
+    , notifications : Toast.Tray Toast
     }
 
 
 type Msg
     = StoreMsg Store.Msg
+    | ToastMsg Toast.Msg
     | UrlChanged Url
     | UrlRequested Browser.UrlRequest
     | CreatePost PostCreateData
@@ -66,25 +78,51 @@ init () url navKey =
     { store = store
     , route = route
     , navKey = navKey
+    , notifications = Toast.tray
     }
         |> sendDataRequests requests
 
 
 sendDataRequest : Store.Action -> Model -> ( Model, Cmd Msg )
 sendDataRequest request model =
-    sendDataRequests [ request ] model
-
-
-sendDataRequests : List Store.Action -> Model -> ( Model, Cmd Msg )
-sendDataRequests requests model =
     let
         ( newStore, storeCmd ) =
             model.store
-                |> Store.runActions requests
+                |> Store.runAction request
     in
     ( { model | store = newStore }
     , Cmd.map StoreMsg storeCmd
     )
+
+
+sendDataRequests : List Store.Action -> Model -> ( Model, Cmd Msg )
+sendDataRequests requests model =
+    List.foldl
+        (\request modelAndCmd ->
+            modelAndCmd
+                |> Cmd.andThen (sendDataRequest request)
+        )
+        ( model, Cmd.none )
+        requests
+
+
+storeMsgToast : Store.Msg -> Maybe Toast
+storeMsgToast storeMsg =
+    case storeMsg of
+        Store.HttpError action err ->
+            Just (StoreActionFailure action err)
+
+        Store.GotPosts _ ->
+            Nothing
+
+        Store.GotUsers _ ->
+            Nothing
+
+        Store.GotImage _ ->
+            Nothing
+
+        Store.CreatedPost action _ ->
+            Just (StoreActionSuccess action)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -98,11 +136,25 @@ update msg model =
                 requests : List Store.Action
                 requests =
                     dataRequests newStore model.route
+
+                maybeToast : Maybe Toast
+                maybeToast =
+                    storeMsgToast storeMsg
             in
             ( { model | store = newStore }
             , Cmd.map StoreMsg storeCmd
             )
                 |> Cmd.andThen (sendDataRequests requests)
+                |> Cmd.andThenMaybe addToast maybeToast
+
+        ToastMsg toastMsg ->
+            let
+                ( newNotifications, toastCmd ) =
+                    Toast.update toastMsg model.notifications
+            in
+            ( { model | notifications = newNotifications }
+            , Cmd.map ToastMsg toastCmd
+            )
 
         UrlChanged url ->
             let
@@ -128,8 +180,25 @@ update msg model =
                     ( model, Browser.Navigation.load urlString )
 
         CreatePost data ->
+            let
+                request : Store.Action
+                request =
+                    Store.CreatePost data
+            in
             model
-                |> sendDataRequest (Store.CreatePost data)
+                |> sendDataRequest request
+                |> Cmd.andThen (addToast (StoreActionSent request))
+
+
+addToast : Toast -> Model -> ( Model, Cmd Msg )
+addToast toast model =
+    let
+        ( newNotifications, toastCmd ) =
+            Toast.add model.notifications (createToast toast)
+    in
+    ( { model | notifications = newNotifications }
+    , Cmd.map ToastMsg toastCmd
+    )
 
 
 dataRequests : Store -> Route -> List Store.Action
@@ -180,8 +249,111 @@ view model =
                 NotFoundRoute ->
                     Html.text "Page not found"
             ]
+        , notificationsView model.notifications
         ]
     }
+
+
+notificationsView : Toast.Tray Toast -> Html Msg
+notificationsView tray =
+    Html.div
+        [ Attrs.class "absolute top-4 right-4" ]
+        [ Toast.render toastView tray (Toast.config ToastMsg) ]
+
+
+createToast toast =
+    -- createToast : Toast -> Toast.Toast Toast
+    -- the library doesn't expose Toast.Toast so I can't do that :(
+    case toast of
+        StoreActionSent _ ->
+            toast
+                |> Toast.expireIn 3000
+                |> Toast.withExitTransition 900
+
+        StoreActionSuccess _ ->
+            toast
+                |> Toast.expireIn 3000
+                |> Toast.withExitTransition 900
+
+        StoreActionFailure _ _ ->
+            toast
+                |> Toast.persistent
+                |> Toast.withExitTransition 900
+
+
+toastView : List (Attribute Msg) -> Toast.Info Toast -> Html Msg
+toastView attrs toast =
+    (case toast.content of
+        StoreActionSent action ->
+            case action of
+                Store.GetPosts ->
+                    Nothing
+
+                Store.GetUsers ->
+                    Nothing
+
+                Store.GetImage _ ->
+                    Nothing
+
+                Store.CreatePost post ->
+                    Just <|
+                        UI.Toast.sent <|
+                            "Creating post '"
+                                ++ post.title
+                                ++ "'"
+
+        StoreActionSuccess action ->
+            case action of
+                Store.GetPosts ->
+                    Nothing
+
+                Store.GetUsers ->
+                    Nothing
+
+                Store.GetImage _ ->
+                    Nothing
+
+                Store.CreatePost post ->
+                    Just <|
+                        UI.Toast.success <|
+                            "Created post '"
+                                ++ post.title
+                                ++ "'"
+
+        StoreActionFailure action err ->
+            case action of
+                Store.GetPosts ->
+                    Just <| UI.Toast.failure "Failed to get posts"
+
+                Store.GetUsers ->
+                    Just <| UI.Toast.failure "Failed to get users"
+
+                Store.GetImage id ->
+                    Just <|
+                        UI.Toast.failure <|
+                            "Failed to get image '"
+                                ++ id
+                                ++ "'"
+
+                Store.CreatePost post ->
+                    Just <|
+                        UI.Toast.failure <|
+                            "Failed to create post '"
+                                ++ post.title
+                                ++ "'"
+    )
+        |> Maybe.map
+            (\html ->
+                Html.div
+                    (Attrs.classList
+                        [ ( "transition duration-300 transform-gpu", True )
+                        , ( "opacity-0 translate-x-full", toast.phase == Toast.Exit )
+                        ]
+                        :: attrs
+                    )
+                    [ html ]
+            )
+        |> Maybe.withDefault (Html.text "")
 
 
 navView : Store -> Route -> Html Msg

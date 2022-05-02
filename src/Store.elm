@@ -1,13 +1,13 @@
 module Store exposing
     ( Store, init
-    , Action(..), runActions
-    , Msg, update
+    , Action(..), runAction
+    , Msg(..), update
     )
 
 {-|
 
 @docs Store, init
-@docs Action, runActions
+@docs Action, runAction
 @docs Msg, update
 
 -}
@@ -51,7 +51,7 @@ type Msg
     | GotPosts (List Post)
     | GotUsers (List User)
     | GotImage Image
-    | CreatedPost Post
+    | CreatedPost Action Post
 
 
 init : Store
@@ -94,19 +94,8 @@ runAction action store =
 
         CreatePost postCreateData ->
             ( store
-            , send action (API.Post.create postCreateData) CreatedPost
+            , send action (API.Post.create postCreateData) (CreatedPost action)
             )
-
-
-runActions : List Action -> Store -> ( Store, Cmd Msg )
-runActions actions store =
-    List.foldl
-        (\action ( accStore, cmd ) ->
-            ( accStore, cmd )
-                |> Cmd.andThen (runAction action)
-        )
-        ( store, Cmd.none )
-        actions
 
 
 shouldSendRequest : WebData a -> Bool
@@ -156,7 +145,7 @@ update msg store =
             , Cmd.none
             )
 
-        CreatedPost post ->
+        CreatedPost _ post ->
             ( { store | posts = RemoteData.map (Dict.insert post.id post) store.posts }
             , Cmd.none
             )
