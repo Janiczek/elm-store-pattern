@@ -2,24 +2,27 @@ module UI.Toast exposing (failure, sent, success)
 
 import Html exposing (Html)
 import Html.Attributes as Attrs
+import Html.Events as Events
 import Svg
 import Svg.Attributes as SvgAttrs
+import UI
 
 
-toast : Html msg -> String -> Html msg
-toast icon message =
+htmlToast : Html msg -> { close : msg } -> Html msg -> Html msg
+htmlToast icon { close } contents =
     Html.div
-        [ Attrs.class "flex items-center w-full max-w-xs p-4 mb-4 text-gray-500 bg-white rounded-lg shadow dark:text-gray-400 dark:bg-gray-800"
+        [ Attrs.class "flex items-center w-full max-w-xs p-4 mb-4 text-gray-500 bg-white rounded-lg shadow-md dark:text-gray-400 dark:bg-gray-800"
         , Attrs.attribute "role" "alert"
         ]
         [ icon
         , Html.div
-            [ Attrs.class "ml-3 text-sm font-normal" ]
-            [ Html.text message ]
+            [ Attrs.class "ml-3" ]
+            [ contents ]
         , Html.button
             [ Attrs.type_ "button"
             , Attrs.class "ml-auto -mx-1.5 -my-1.5 bg-white text-gray-400 hover:text-gray-900 rounded-lg focus:ring-2 focus:ring-gray-300 p-1.5 hover:bg-gray-100 inline-flex h-8 w-8 dark:text-gray-500 dark:hover:text-white dark:bg-gray-800 dark:hover:bg-gray-700"
             , Attrs.attribute "aria-label" "Close"
+            , Events.onClick close
             ]
             [ Html.span [ Attrs.class "sr-only" ] [ Html.text "Close" ]
             , Svg.svg
@@ -38,8 +41,19 @@ toast icon message =
         ]
 
 
-success : String -> Html msg
-success message =
+textToast : Html msg -> { close : msg } -> String -> Html msg
+textToast icon c message =
+    htmlToast
+        icon
+        c
+        (Html.span
+            [ Attrs.class "text-sm font-normal" ]
+            [ Html.text message ]
+        )
+
+
+success : { close : msg } -> String -> Html msg
+success close message =
     let
         successIcon : Html msg
         successIcon =
@@ -59,12 +73,24 @@ success message =
                     ]
                 ]
     in
-    toast successIcon message
+    textToast successIcon close message
 
 
-failure : String -> Html msg
-failure message =
+failure : { close : msg, openDetails : msg } -> String -> Html msg
+failure c message =
     let
+        content : Html msg
+        content =
+            Html.div
+                [ Attrs.class "text-sm font-normal" ]
+                [ Html.p [] [ Html.text message ]
+                , Html.button
+                    [ Events.onClick c.openDetails
+                    , Attrs.class UI.redButton
+                    ]
+                    [ Html.text "Details" ]
+                ]
+
         failureIcon : Html msg
         failureIcon =
             Html.div
@@ -83,11 +109,11 @@ failure message =
                     ]
                 ]
     in
-    toast failureIcon message
+    htmlToast failureIcon { close = c.close } content
 
 
-sent : String -> Html msg
-sent message =
+sent : { close : msg } -> String -> Html msg
+sent close message =
     let
         sentIcon : Html msg
         sentIcon =
@@ -95,14 +121,14 @@ sent message =
                 [ Attrs.class "inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-blue-500 bg-blue-100 rounded-lg dark:bg-blue-800 dark:text-blue-200" ]
                 [ Svg.svg
                     [ SvgAttrs.class "w-5 h-5 text-blue-600 dark:text-blue-500"
-                    , SvgAttrs.viewBox "0 0 256 256"
+                    , SvgAttrs.viewBox "0 0 448 512"
                     ]
                     [ Svg.path
                         [ SvgAttrs.fill "currentColor"
-                        , SvgAttrs.d "M511.6 36.86l-64 415.1c-1.5 9.734-7.375 18.22-15.97 23.05c-4.844 2.719-10.27 4.097-15.68 4.097c-4.188 0-8.319-.8154-12.29-2.472l-122.6-51.1l-50.86 76.29C226.3 508.5 219.8 512 212.8 512C201.3 512 192 502.7 192 491.2v-96.18c0-7.115 2.372-14.03 6.742-19.64L416 96l-293.7 264.3L19.69 317.5C8.438 312.8 .8125 302.2 .0625 289.1s5.469-23.72 16.06-29.77l448-255.1c10.69-6.109 23.88-5.547 34 1.406S513.5 24.72 511.6 36.86z"
+                        , SvgAttrs.d "M438.6 278.6l-160 160C272.4 444.9 264.2 448 256 448s-16.38-3.125-22.62-9.375c-12.5-12.5-12.5-32.75 0-45.25L338.8 288H32C14.33 288 .0016 273.7 .0016 256S14.33 224 32 224h306.8l-105.4-105.4c-12.5-12.5-12.5-32.75 0-45.25s32.75-12.5 45.25 0l160 160C451.1 245.9 451.1 266.1 438.6 278.6z"
                         ]
                         []
                     ]
                 ]
     in
-    toast sentIcon message
+    textToast sentIcon close message

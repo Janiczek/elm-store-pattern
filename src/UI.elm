@@ -1,4 +1,4 @@
-module UI exposing (a, button, h1, td, th)
+module UI exposing (a, blueButton, code, h1, redButton, td, th)
 
 
 td : String
@@ -18,9 +18,19 @@ h1 =
 
 a : String
 a =
-    "underline text-sky-600"
+    "underline text-sky-600 hover:text-sky-500"
 
 
-button : String
-button =
+blueButton : String
+blueButton =
     "px-4 py-2 font-semibold text-sm bg-sky-500 hover:bg-sky-400 text-white rounded-none shadow-sm hover:shadow-md active:bg-sky-300"
+
+
+redButton : String
+redButton =
+    "px-4 py-2 font-semibold text-sm bg-red-500 hover:bg-red-400 text-white rounded-none shadow-sm hover:shadow-md active:bg-red-300"
+
+
+code : String
+code =
+    "flex p-2 rounded border-2 border-slate-300 bg-slate-50"

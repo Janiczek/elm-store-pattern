@@ -18,7 +18,6 @@ import API.User exposing (User, UserId)
 import Dict exposing (Dict)
 import Http
 import RemoteData exposing (RemoteData(..), WebData)
-import RemoteData.Extra as RemoteData
 
 
 type alias Store =
@@ -83,7 +82,7 @@ runAction action store =
                 ( store, Cmd.none )
 
         GetImage imageId ->
-            if shouldSendRequest (RemoteData.get_ imageId store.images) then
+            if shouldSendRequest_ (Dict.get imageId store.images) then
                 ( { store | images = Dict.insert imageId Loading store.images }
                 , send action (API.Image.get imageId) GotImage
                 )
@@ -107,10 +106,20 @@ shouldSendRequest webdata =
             False
 
         Failure _ ->
-            True
+            False
 
         Success _ ->
             False
+
+
+shouldSendRequest_ : Maybe (WebData a) -> Bool
+shouldSendRequest_ maybeWebdata =
+    case maybeWebdata of
+        Nothing ->
+            True
+
+        Just webdata ->
+            shouldSendRequest webdata
 
 
 send : Action -> ((Result Http.Error a -> Msg) -> Cmd Msg) -> (a -> Msg) -> Cmd Msg

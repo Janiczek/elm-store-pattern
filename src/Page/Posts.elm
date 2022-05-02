@@ -49,6 +49,7 @@ postsView config posts users =
                     ([ "ID"
                      , "Title"
                      , "Author"
+                     , "Images"
                      ]
                         |> List.map
                             (\title ->
@@ -74,7 +75,7 @@ postsView config posts users =
                         , content = "I am A!"
                         }
                     )
-                , Attrs.class UI.button
+                , Attrs.class UI.blueButton
                 ]
                 [ Html.text "Create post A" ]
             , Html.button
@@ -85,7 +86,7 @@ postsView config posts users =
                         , content = "B side"
                         }
                     )
-                , Attrs.class UI.button
+                , Attrs.class UI.blueButton
                 ]
                 [ Html.text "Create post B" ]
             , Html.button
@@ -96,7 +97,7 @@ postsView config posts users =
                         , content = "C C C C C"
                         }
                     )
-                , Attrs.class UI.button
+                , Attrs.class UI.blueButton
                 ]
                 [ Html.text "Create post C" ]
             ]
@@ -106,25 +107,33 @@ postsView config posts users =
 postRowView : Dict UserId User -> Post -> Html msg
 postRowView users post =
     let
-        cell : ( String, Route ) -> Html msg
-        cell ( text, route ) =
+        cell : ( String, Maybe Route ) -> Html msg
+        cell ( text, maybeRoute ) =
             Html.td
                 [ Attrs.class UI.td
                 ]
-                [ Html.a
-                    [ Attrs.href (Route.toString route)
-                    , Attrs.class UI.a
-                    ]
-                    [ Html.text text ]
+                [ maybeRoute
+                    |> Maybe.map
+                        (\route ->
+                            Html.a
+                                [ Attrs.href (Route.toString route)
+                                , Attrs.class UI.a
+                                ]
+                                [ Html.text text ]
+                        )
+                    |> Maybe.withDefault (Html.text text)
                 ]
     in
     Html.tr []
-        ([ ( post.id, PostRoute post.id )
-         , ( post.title, PostRoute post.id )
+        ([ ( post.id, Just (PostRoute post.id) )
+         , ( post.title, Just (PostRoute post.id) )
          , ( Dict.get post.authorId users
                 |> Maybe.map .name
                 |> Maybe.withDefault ("#" ++ post.authorId)
-           , UserRoute post.authorId
+           , Just (UserRoute post.authorId)
+           )
+         , ( String.repeat (List.length post.imageIds) "🌆"
+           , Nothing
            )
          ]
             |> List.map cell

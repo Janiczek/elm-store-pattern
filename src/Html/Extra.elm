@@ -1,20 +1,9 @@
-module Html.Extra exposing (debug, spinner, todo)
+module Html.Extra exposing (spinner, todo)
 
-import DebugToJson
 import Html exposing (Html)
 import Html.Attributes as Attrs
 import Svg
 import Svg.Attributes as SvgAttrs
-
-
-debug : a -> Html msg
-debug value =
-    value
-        |> Debug.toString
-        |> DebugToJson.pp
-        |> Html.text
-        |> List.singleton
-        |> Html.pre [ Attrs.class "p-4 bg-purple-100 border-purple-200 border-2 whitespace-pre-wrap" ]
 
 
 todo : String -> Html msg

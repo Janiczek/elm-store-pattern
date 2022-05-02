@@ -25,6 +25,7 @@ dataRequests store postId =
         dynamicRequests =
             RemoteData.get postId store.posts
                 |> RemoteData.map .imageIds
+                |> Debug.log "reqs"
                 |> RemoteData.withDefault []
                 |> List.map Store.GetImage
     in
@@ -39,7 +40,7 @@ view store postId =
             RemoteData.get postId store.posts
                 |> RemoteData.map (.title >> (\s -> "\"" ++ s ++ "\""))
                 |> RemoteData.withDefault ("#" ++ postId)
-                |> (\s -> "Post " ++ s)
+                |> (\s -> "Post: " ++ s)
     in
     Html.div
         []

@@ -7,6 +7,7 @@ import Cmd.Extra as Cmd
 import Dict exposing (Dict)
 import Html exposing (Attribute, Html)
 import Html.Attributes as Attrs
+import Html.Events as Events
 import Http
 import Page.Post
 import Page.Posts
@@ -48,6 +49,7 @@ type alias Model =
     , route : Route
     , navKey : Browser.Navigation.Key
     , notifications : Toast.Tray Toast
+    , failureDetailsModal : Maybe ( Store.Action, Http.Error )
     }
 
 
@@ -57,6 +59,9 @@ type Msg
     | UrlChanged Url
     | UrlRequested Browser.UrlRequest
     | CreatePost PostCreateData
+    | OpenFailureDetails Store.Action Http.Error
+    | CloseFailureDetails
+    | CopyFailureDetails
 
 
 init : Flags -> Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
@@ -78,6 +83,7 @@ init () url navKey =
     , route = route
     , navKey = navKey
     , notifications = Toast.tray
+    , failureDetailsModal = Nothing
     }
         |> sendDataRequests requests
 
@@ -188,6 +194,25 @@ update msg model =
                 |> sendDataRequest request
                 |> Cmd.andThen (addToast (StoreActionSent request))
 
+        OpenFailureDetails action err ->
+            ( { model | failureDetailsModal = Just ( action, err ) }
+            , Cmd.none
+            )
+
+        CloseFailureDetails ->
+            ( { model | failureDetailsModal = Nothing }
+            , Cmd.none
+            )
+
+        CopyFailureDetails ->
+            let
+                _ =
+                    Debug.log "TODO copy failure"
+            in
+            ( model
+            , Cmd.none
+            )
+
 
 addToast : Toast -> Model -> ( Model, Cmd Msg )
 addToast toast model =
@@ -247,10 +272,66 @@ view model =
 
                 NotFoundRoute ->
                     Html.text "Page not found"
+            , model.failureDetailsModal
+                |> Maybe.map failureDetailsModalView
+                |> Maybe.withDefault (Html.text "")
             ]
         , notificationsView model.notifications
         ]
     }
+
+
+failureDetailsModalView : ( Store.Action, Http.Error ) -> Html Msg
+failureDetailsModalView _ =
+    let
+        url : String
+        url =
+            "GET https://api.example.com/endpoint"
+
+        request : String
+        request =
+            "TODO request body JSON"
+
+        response : String
+        response =
+            "TODO response body JSON"
+
+        curl : String
+        curl =
+            "TODO curl to copypaste"
+    in
+    Html.div
+        [ Attrs.class "absolute inset-20 p-2 border-2 border-orange-300 bg-orange-200 flex flex-col gap-2" ]
+        [ Html.p [] [ Html.text "Something went wrong... Please send this to our support:" ]
+        , Html.div []
+            [ Html.h3 [] [ Html.text "Endpoint:" ]
+            , Html.code [ Attrs.class UI.code ] [ Html.text url ]
+            ]
+        , Html.div []
+            [ Html.h3 [] [ Html.text "Request:" ]
+            , Html.code [ Attrs.class UI.code ] [ Html.text request ]
+            ]
+        , Html.div []
+            [ Html.h3 [] [ Html.text "Response:" ]
+            , Html.code [ Attrs.class UI.code ] [ Html.text response ]
+            ]
+        , Html.div []
+            [ Html.h3 [] [ Html.text "CURL:" ]
+            , Html.code [ Attrs.class UI.code ] [ Html.text curl ]
+            ]
+        , Html.div [ Attrs.class "flex flex-row gap-2" ]
+            [ Html.button
+                [ Events.onClick CopyFailureDetails
+                , Attrs.class UI.blueButton
+                ]
+                [ Html.text "Copy to clipboard" ]
+            , Html.button
+                [ Events.onClick CloseFailureDetails
+                , Attrs.class UI.redButton
+                ]
+                [ Html.text "Close" ]
+            ]
+        ]
 
 
 notificationsView : Toast.Tray Toast -> Html Msg
@@ -260,9 +341,8 @@ notificationsView tray =
         [ Toast.render toastView tray (Toast.config ToastMsg) ]
 
 
+createToast : Toast -> Toast.Toast Toast
 createToast toast =
-    -- createToast : Toast -> Toast.Toast Toast
-    -- the library doesn't expose Toast.Toast so I can't do that :(
     case toast of
         StoreActionSent _ ->
             toast
@@ -296,10 +376,12 @@ toastView attrs toast =
 
                 Store.CreatePost post ->
                     Just <|
-                        UI.Toast.sent <|
-                            "Creating post '"
+                        UI.Toast.sent
+                            { close = ToastMsg (Toast.exit toast.id) }
+                            ("Creating post '"
                                 ++ post.title
                                 ++ "'"
+                            )
 
         StoreActionSuccess action ->
             case action of
@@ -314,32 +396,44 @@ toastView attrs toast =
 
                 Store.CreatePost post ->
                     Just <|
-                        UI.Toast.success <|
-                            "Created post '"
+                        UI.Toast.success
+                            { close = ToastMsg (Toast.exit toast.id) }
+                            ("Created post '"
                                 ++ post.title
                                 ++ "'"
+                            )
 
         StoreActionFailure action err ->
+            let
+                failure : String -> Maybe (Html Msg)
+                failure message =
+                    Just <|
+                        UI.Toast.failure
+                            { close = ToastMsg (Toast.exit toast.id)
+                            , openDetails = OpenFailureDetails action err
+                            }
+                            message
+            in
             case action of
                 Store.GetPosts ->
-                    Just <| UI.Toast.failure "Failed to get posts"
+                    failure "Failed to get posts"
 
                 Store.GetUsers ->
-                    Just <| UI.Toast.failure "Failed to get users"
+                    failure "Failed to get users"
 
                 Store.GetImage id ->
-                    Just <|
-                        UI.Toast.failure <|
-                            "Failed to get image '"
-                                ++ id
-                                ++ "'"
+                    failure
+                        ("Failed to get image '"
+                            ++ id
+                            ++ "'"
+                        )
 
                 Store.CreatePost post ->
-                    Just <|
-                        UI.Toast.failure <|
-                            "Failed to create post '"
-                                ++ post.title
-                                ++ "'"
+                    failure
+                        ("Failed to create post '"
+                            ++ post.title
+                            ++ "'"
+                        )
     )
         |> Maybe.map
             (\html ->
@@ -365,14 +459,14 @@ navView store currentRoute =
                     "All Posts"
 
                 PostRoute id ->
-                    "Post "
+                    "Post: "
                         ++ (RemoteData.get id store.posts
                                 |> RemoteData.map (\{ title } -> "\"" ++ title ++ "\"")
                                 |> RemoteData.withDefault ("#" ++ id)
                            )
 
                 UserRoute id ->
-                    "User "
+                    "User: "
                         ++ (RemoteData.get id store.users
                                 |> RemoteData.map .name
                                 |> RemoteData.withDefault ("#" ++ id)

@@ -3,7 +3,6 @@ module Page.User exposing (dataRequests, view)
 import API.User exposing (User, UserId)
 import Html exposing (Html)
 import Html.Attributes as Attrs
-import Html.Extra as Html
 import RemoteData
 import RemoteData.Extra as RemoteData
 import Store exposing (Store)
@@ -25,7 +24,7 @@ view store userId =
             RemoteData.get userId store.users
                 |> RemoteData.map .name
                 |> RemoteData.withDefault ("#" ++ userId)
-                |> (\s -> "User " ++ s)
+                |> (\s -> "User: " ++ s)
     in
     Html.div
         []
@@ -39,4 +38,7 @@ view store userId =
 
 userView : User -> Html msg
 userView user =
-    Html.debug user
+    Html.ul []
+        [ Html.li [] [ Html.text <| "ID: " ++ user.id ]
+        , Html.li [] [ Html.text <| "Name: " ++ user.name ]
+        ]
