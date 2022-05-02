@@ -11,13 +11,13 @@ type Route
     = PostsRoute
     | PostRoute PostId
     | UserRoute UserId
-    | UserImagesRoute UserId
     | NotFoundRoute
 
 
 toString : Route -> String
 toString route =
     let
+        segments : List String
         segments =
             case route of
                 PostsRoute ->
@@ -28,9 +28,6 @@ toString route =
 
                 UserRoute userId ->
                     [ "users", userId ]
-
-                UserImagesRoute userId ->
-                    [ "users", userId, "images" ]
 
                 NotFoundRoute ->
                     [ "not-found" ]
@@ -51,6 +48,5 @@ parser =
         , Url.Parser.map PostsRoute <| Url.Parser.s "posts"
         , Url.Parser.map PostRoute <| Url.Parser.s "posts" </> Url.Parser.string
         , Url.Parser.map UserRoute <| Url.Parser.s "users" </> Url.Parser.string
-        , Url.Parser.map UserImagesRoute <| Url.Parser.s "users" </> Url.Parser.string </> Url.Parser.s "images"
         , Url.Parser.map NotFoundRoute <| Url.Parser.s "not-found"
         ]

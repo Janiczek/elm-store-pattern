@@ -167,7 +167,25 @@ update msg store =
             )
 
         HttpError action error ->
-            Debug.todo "Store.update http error"
+            ( saveFailure action error store
+            , Cmd.none
+            )
+
+
+saveFailure : Action -> Http.Error -> Store -> Store
+saveFailure action err store =
+    case action of
+        GetPosts ->
+            { store | posts = Failure err }
+
+        GetUsers ->
+            { store | users = Failure err }
+
+        GetImage imageId ->
+            { store | images = Dict.insert imageId (Failure err) store.images }
+
+        CreateImage _ ->
+            store
 
 
 dictByIds : List { a | id : String } -> Dict String { a | id : String }

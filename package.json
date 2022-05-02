@@ -3,7 +3,7 @@
   "scripts": {
     "postinstall": "elm-tooling install",
     "build": "elm make src/Main.elm --output=elm.js",
-    "start": "elm-live src/Main.elm --hot --open -- --output=elm.js"
+    "start": "elm-live src/Main.elm --hot --open --pushstate -- --output=elm.js"
   },
   "devDependencies": {
     "elm-live": "^4.0.2",

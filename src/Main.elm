@@ -6,7 +6,9 @@ import Dict exposing (Dict)
 import Html exposing (Html)
 import Html.Attributes as Attrs
 import Html.Extra as Html
+import Page.Post
 import Page.Posts
+import Page.User
 import RemoteData exposing (WebData)
 import Route exposing (Route(..))
 import Store exposing (Store)
@@ -35,6 +37,8 @@ type alias Model =
     , route : Route
     , navKey : Browser.Navigation.Key
     , postsPage : Page.Posts.Model
+    , postPage : Page.Post.Model
+    , userPage : Page.User.Model
     }
 
 
@@ -50,14 +54,22 @@ init () url navKey =
         route =
             Route.fromUrl url
 
-        ( store, storeCmd ) =
+        initStore =
             Store.init
-                |> Store.runActions (dataRequests route)
+
+        requests =
+            dataRequests initStore route
+
+        ( store, storeCmd ) =
+            initStore
+                |> Store.runActions requests
     in
     ( { store = store
       , route = route
       , navKey = navKey
       , postsPage = Page.Posts.init
+      , postPage = Page.Post.init
+      , userPage = Page.User.init
       }
     , Cmd.map StoreMsg storeCmd
     )
@@ -93,14 +105,20 @@ update msg model =
                     ( model, Browser.Navigation.load urlString )
 
 
-dataRequests : Route -> List Store.Action
-dataRequests route =
+dataRequests : Store -> Route -> List Store.Action
+dataRequests store route =
     case route of
         PostsRoute ->
             Page.Posts.dataRequests
 
-        _ ->
-            Debug.todo "Main.dataRequests"
+        PostRoute postId ->
+            Page.Post.dataRequests store postId
+
+        UserRoute userId ->
+            Page.User.dataRequests store userId
+
+        NotFoundRoute ->
+            []
 
 
 subscriptions : Model -> Sub Msg
@@ -115,15 +133,70 @@ view model =
         [ Html.div
             [ Attrs.class "p-4 gap-4 flex flex-col" ]
             [ storeLoadView model.store
+            , navView model.route
             , case model.route of
                 PostsRoute ->
                     Page.Posts.view model.store model.postsPage
 
-                _ ->
-                    Html.todo <| Debug.toString model.route
+                PostRoute postId ->
+                    Page.Post.view model.store postId model.postPage
+
+                UserRoute userId ->
+                    Page.User.view model.store userId model.userPage
+
+                NotFoundRoute ->
+                    Html.text "Page not found"
             ]
         ]
     }
+
+
+navView : Route -> Html Msg
+navView currentRoute =
+    let
+        routeLabel : Route -> String
+        routeLabel route =
+            case route of
+                PostsRoute ->
+                    "All Posts"
+
+                PostRoute id ->
+                    "Post #" ++ id
+
+                UserRoute id ->
+                    "User #" ++ id
+
+                NotFoundRoute ->
+                    "Not Found"
+
+        stableRoutes : List Route
+        stableRoutes =
+            [ PostsRoute ]
+
+        allRoutes : List Route
+        allRoutes =
+            if List.member currentRoute stableRoutes then
+                stableRoutes
+
+            else
+                stableRoutes ++ [ currentRoute ]
+    in
+    Html.div [ Attrs.class "flex flex-row gap-2" ]
+        (Html.text "Nav: "
+            :: (allRoutes
+                    |> List.map
+                        (\route ->
+                            Html.a
+                                [ Attrs.href (Route.toString route)
+                                , Attrs.classList
+                                    [ ( "text-blue-600", True )
+                                    , ( "font-bold border-b-2", route == currentRoute )
+                                    ]
+                                ]
+                                [ Html.text (routeLabel route) ]
+                        )
+               )
+        )
 
 
 storeLoadView : Store -> Html msg

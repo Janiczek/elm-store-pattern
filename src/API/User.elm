@@ -22,6 +22,7 @@ type alias UserId =
 
 getAll : (Result Http.Error (List User) -> msg) -> Cmd msg
 getAll toMsg =
+    --Http.mockFailNetworkError 2000 toMsg
     Http.mockSuccess 2000
         [ User "999" "Martin"
         , User "42" "Peter"

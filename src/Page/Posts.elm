@@ -5,9 +5,11 @@ import API.User exposing (User, UserId)
 import Dict exposing (Dict)
 import Html exposing (Html)
 import Html.Attributes as Attrs
+import Html.Events as Events
 import Html.Extra as Html
 import RemoteData
 import RemoteData.Extra as RemoteData
+import Route exposing (Route(..))
 import Store exposing (Store)
 import UI
 
@@ -71,18 +73,26 @@ postsView posts users =
 postRowView : Dict UserId User -> Post -> Html msg
 postRowView users post =
     let
-        cell : String -> Html msg
-        cell text =
+        cell : ( String, Route ) -> Html msg
+        cell ( text, route ) =
             Html.td
-                [ Attrs.class UI.td ]
-                [ Html.text text ]
+                [ Attrs.class UI.td
+                ]
+                [ Html.a
+                    [ Attrs.href (Route.toString route)
+                    , Attrs.class "underline text-blue-600"
+                    ]
+                    [ Html.text text ]
+                ]
     in
     Html.tr []
-        ([ post.id
-         , post.title
-         , Dict.get post.authorId users
-            |> Maybe.map .name
-            |> Maybe.withDefault ("#" ++ post.authorId)
+        ([ ( post.id, PostRoute post.id )
+         , ( post.title, PostRoute post.id )
+         , ( Dict.get post.authorId users
+                |> Maybe.map .name
+                |> Maybe.withDefault ("#" ++ post.authorId)
+           , UserRoute post.authorId
+           )
          ]
             |> List.map cell
         )
