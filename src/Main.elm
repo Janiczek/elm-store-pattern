@@ -301,7 +301,7 @@ failureDetailsModalView _ =
             "TODO curl to copypaste"
     in
     Html.div
-        [ Attrs.class "absolute inset-20 p-2 border-2 border-orange-300 bg-orange-200 flex flex-col gap-2" ]
+        [ Attrs.class "absolute inset-20 z-20 p-2 border-2 border-orange-300 bg-orange-200 flex flex-col gap-2" ]
         [ Html.p [] [ Html.text "Something went wrong... Please send this to our support:" ]
         , Html.div []
             [ Html.h3 [] [ Html.text "Endpoint:" ]
@@ -337,7 +337,7 @@ failureDetailsModalView _ =
 notificationsView : Toast.Tray Toast -> Html Msg
 notificationsView tray =
     Html.div
-        [ Attrs.class "absolute top-4 right-4" ]
+        [ Attrs.class "absolute top-4 right-4 z-10" ]
         [ Toast.render toastView tray (Toast.config ToastMsg) ]
 
 
