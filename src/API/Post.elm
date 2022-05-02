@@ -14,7 +14,7 @@ import Http.Extra as Http
 type alias Post =
     { id : PostId
     , title : String
-    , author : UserId
+    , authorId : UserId
     }
 
 
@@ -24,7 +24,7 @@ type alias PostId =
 
 getAll : (Result Http.Error (List Post) -> msg) -> Cmd msg
 getAll toMsg =
-    Http.mockSuccess
+    Http.mockSuccess 1500
         [ Post "1" "First" "42"
         , Post "2" "Second" "999"
         , Post "4" "Other" "42"

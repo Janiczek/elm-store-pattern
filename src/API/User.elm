@@ -1,8 +1,8 @@
-module API.User exposing (User, UserId, get)
+module API.User exposing (User, UserId, getAll)
 
 {-|
 
-@docs User, UserId, get
+@docs User, UserId, getAll
 
 -}
 
@@ -20,10 +20,11 @@ type alias UserId =
     String
 
 
-get : UserId -> (Result Http.Error User -> msg) -> Cmd msg
-get id toMsg =
-    Http.mockSuccess
-        { id = id
-        , name = "Test user " ++ id
-        }
+getAll : (Result Http.Error (List User) -> msg) -> Cmd msg
+getAll toMsg =
+    Http.mockSuccess 2000
+        [ User "999" "Martin"
+        , User "42" "Peter"
+        , User "4" "Casey"
+        ]
         toMsg

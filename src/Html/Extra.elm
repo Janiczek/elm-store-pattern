@@ -1,4 +1,4 @@
-module Html.Extra exposing (debug, todo, webDataView)
+module Html.Extra exposing (debug, spinner, todo)
 
 import DebugToJson
 import Html exposing (Html)
@@ -25,27 +25,8 @@ todo message =
         [ Html.text message ]
 
 
-webDataView : String -> (a -> Html msg) -> WebData a -> Html msg
-webDataView label successView data =
-    case data of
-        NotAsked ->
-            Html.text ""
-
-        Loading ->
-            Html.div [ Attrs.class "inline-flex flex-col shrink items-center gap-2" ]
-                [ Html.span [] [ Html.text <| "Loading " ++ label ++ "..." ]
-                , spinnerView
-                ]
-
-        Failure err ->
-            todo <| "error view for " ++ label ++ ": " ++ Debug.toString err
-
-        Success value ->
-            successView value
-
-
-spinnerView : Html msg
-spinnerView =
+spinner : Html msg
+spinner =
     Svg.svg
         [ SvgAttrs.class "animate-spin text-red w-6 h-6"
         , SvgAttrs.fill "none"

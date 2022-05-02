@@ -25,12 +25,12 @@ type alias Store =
     { -- we're loading all posts at once
       -- GET /api/posts
       posts : WebData (Dict PostId Post)
-    , -- we're lazy-loading users as needed
-      -- GET /api/users/<ID>
-      users : Dict UserId (WebData User)
-    , -- images: lazy-loaded per user, but all at once
-      -- GET /api/users/<ID>/images
-      userImages : Dict UserId (WebData (Dict ImageId Image))
+    , -- we're loading all users at once
+      -- GET /api/users/
+      users : WebData (Dict UserId User)
+    , -- we're lazy loading images as needed
+      -- GET /api/images/<ID>
+      images : Dict ImageId (WebData Image)
     }
 
 
@@ -38,8 +38,8 @@ type alias Store =
 -}
 type Action
     = GetPosts
-    | GetUser UserId
-    | GetUserImages UserId
+    | GetUsers
+    | GetImage ImageId
     | CreateImage ImageCreateData
 
 
@@ -48,16 +48,16 @@ type Action
 type Msg
     = HttpError Action Http.Error -- !
     | GotPosts (List Post)
-    | GotUser UserId User
-    | GotUserImages UserId (List Image)
+    | GotUsers (List User)
+    | GotImage Image
     | CreatedImage Image
 
 
 init : Store
 init =
     { posts = NotAsked
-    , users = Dict.empty
-    , userImages = Dict.empty
+    , users = NotAsked
+    , images = Dict.empty
     }
 
 
@@ -73,19 +73,19 @@ runAction action store =
             else
                 ( store, Cmd.none )
 
-        GetUser userId ->
-            if shouldSendRequest (getWebData userId store.users) then
-                ( { store | users = Dict.insert userId Loading store.users }
-                , send action (API.User.get userId) (GotUser userId)
+        GetUsers ->
+            if shouldSendRequest store.users then
+                ( { store | users = Loading }
+                , send action API.User.getAll GotUsers
                 )
 
             else
                 ( store, Cmd.none )
 
-        GetUserImages userId ->
-            if shouldSendRequest (getWebData userId store.userImages) then
-                ( { store | userImages = Dict.insert userId Loading store.userImages }
-                , send action (API.Image.getAllForUser userId) (GotUserImages userId)
+        GetImage imageId ->
+            if shouldSendRequest (getWebData imageId store.images) then
+                ( { store | images = Dict.insert imageId Loading store.images }
+                , send action (API.Image.get imageId) GotImage
                 )
 
             else
@@ -151,20 +151,20 @@ update msg store =
             , Cmd.none
             )
 
-        GotUser userId user ->
-            ( { store | users = Dict.insert userId (Success user) store.users }
+        GotUsers users ->
+            ( { store | users = Success (dictByIds users) }
             , Cmd.none
             )
 
-        GotUserImages userId images ->
-            ( { store | userImages = Dict.insert userId (Success (dictByIds images)) store.userImages }
+        GotImage image ->
+            ( { store | images = Dict.insert image.id (Success image) store.images }
             , Cmd.none
             )
 
         CreatedImage image ->
-            -- We arbitrarily decide to reload user's images after getting the success.
-            store
-                |> runAction (GetUserImages image.owner)
+            ( { store | images = Dict.insert image.id (Success image) store.images }
+            , Cmd.none
+            )
 
         HttpError action error ->
             Debug.todo "Store.update http error"

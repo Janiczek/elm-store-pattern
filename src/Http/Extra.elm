@@ -9,27 +9,29 @@ import Process
 import Task
 
 
-mockSuccess : a -> (Result Http.Error a -> msg) -> Cmd msg
-mockSuccess value toMsg =
-    emitWithDelay (toMsg (Ok value))
+mockSuccess : Float -> a -> (Result Http.Error a -> msg) -> Cmd msg
+mockSuccess delay value toMsg =
+    emitWithDelay delay
+        (toMsg (Ok value))
 
 
-mockFailNetworkError : (Result Http.Error a -> msg) -> Cmd msg
-mockFailNetworkError toMsg =
-    emitWithDelay (toMsg (Err Http.NetworkError))
+mockFailNetworkError : Float -> (Result Http.Error a -> msg) -> Cmd msg
+mockFailNetworkError delay toMsg =
+    emitWithDelay delay
+        (toMsg (Err Http.NetworkError))
 
 
-mockFailDecoderError : (Result Http.Error a -> msg) -> Cmd msg
-mockFailDecoderError toMsg =
-    emitWithDelay
+mockFailDecoderError : Float -> (Result Http.Error a -> msg) -> Cmd msg
+mockFailDecoderError delay toMsg =
+    emitWithDelay delay
         (toMsg (Err <| Http.BadBody (Debug.todo "flesh this out")))
 
 
-emitWithDelay : msg -> Cmd msg
-emitWithDelay msg =
+emitWithDelay : Float -> msg -> Cmd msg
+emitWithDelay delay msg =
     let
         _ =
             Debug.log "mock request" msg
     in
-    Process.sleep 1000
+    Process.sleep delay
         |> Task.perform (\() -> Debug.log "mock response" msg)

@@ -1,13 +1,13 @@
 module API.Image exposing
     ( Image, ImageId
-    , getAllForUser
+    , get
     , create, ImageCreateData
     )
 
 {-|
 
 @docs Image, ImageId
-@docs getAllForUser
+@docs get
 @docs create, ImageCreateData
 
 -}
@@ -22,7 +22,6 @@ type alias Image =
     , width : Int
     , height : Int
     , content : String
-    , owner : UserId
     }
 
 
@@ -30,12 +29,14 @@ type alias ImageId =
     String
 
 
-getAllForUser : UserId -> (Result Http.Error (List Image) -> msg) -> Cmd msg
-getAllForUser _ toMsg =
-    Http.mockSuccess
-        [ Image "1" 640 480 "blob 1" "42"
-        , Image "2" 400 300 "blob 2" "999"
-        ]
+get : ImageId -> (Result Http.Error Image -> msg) -> Cmd msg
+get imageId toMsg =
+    Http.mockSuccess 1200
+        { id = imageId
+        , width = 640
+        , height = 480
+        , content = "blob"
+        }
         toMsg
 
 
@@ -47,11 +48,10 @@ type alias ImageCreateData =
 
 create : ImageCreateData -> (Result Http.Error Image -> msg) -> Cmd msg
 create data toMsg =
-    Http.mockSuccess
+    Http.mockSuccess 2500
         { id = "10"
-        , width = 640
-        , height = 480
+        , width = 800
+        , height = 600
         , content = data.content
-        , owner = data.owner
         }
         toMsg
