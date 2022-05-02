@@ -25,7 +25,6 @@ dataRequests store postId =
         dynamicRequests =
             RemoteData.get postId store.posts
                 |> RemoteData.map .imageIds
-                |> Debug.log "reqs"
                 |> RemoteData.withDefault []
                 |> List.map Store.GetImage
     in
