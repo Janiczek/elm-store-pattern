@@ -6,8 +6,6 @@ import Dict exposing (Dict)
 import Html exposing (Html)
 import Html.Attributes as Attrs
 import Html.Events as Events
-import Html.Extra as Html
-import RemoteData
 import RemoteData.Extra as RemoteData
 import Route exposing (Route(..))
 import Store exposing (Store)

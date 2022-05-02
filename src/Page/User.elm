@@ -1,8 +1,6 @@
 module Page.User exposing (dataRequests, view)
 
-import API.Post exposing (Post, PostId)
 import API.User exposing (User, UserId)
-import Dict exposing (Dict)
 import Html exposing (Html)
 import Html.Attributes as Attrs
 import Html.Extra as Html
@@ -12,8 +10,8 @@ import Store exposing (Store)
 import UI
 
 
-dataRequests : Store -> UserId -> List Store.Action
-dataRequests store userId =
+dataRequests : List Store.Action
+dataRequests =
     [ Store.GetPosts
     , Store.GetUsers
     ]

@@ -5,7 +5,6 @@ import API.Post exposing (Post, PostId)
 import API.User exposing (User)
 import Html exposing (Html)
 import Html.Attributes as Attrs
-import Html.Extra as Html
 import RemoteData
 import RemoteData.Extra as RemoteData
 import Route exposing (Route(..))

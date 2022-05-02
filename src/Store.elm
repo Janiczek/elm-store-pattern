@@ -15,7 +15,6 @@ module Store exposing
 import API.Image exposing (Image, ImageId)
 import API.Post exposing (Post, PostCreateData, PostId)
 import API.User exposing (User, UserId)
-import Cmd.Extra as Cmd
 import Dict exposing (Dict)
 import Http
 import RemoteData exposing (RemoteData(..), WebData)

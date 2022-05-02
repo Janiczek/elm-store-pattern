@@ -1,4 +1,4 @@
-module Main exposing (Flags, Model, Msg, main)
+module Main exposing (Flags, Model, Msg, Toast, main)
 
 import API.Post exposing (PostCreateData)
 import Browser
@@ -7,7 +7,6 @@ import Cmd.Extra as Cmd
 import Dict exposing (Dict)
 import Html exposing (Attribute, Html)
 import Html.Attributes as Attrs
-import Html.Extra as Html
 import Http
 import Page.Post
 import Page.Posts
@@ -210,8 +209,8 @@ dataRequests store route =
         PostRoute postId ->
             Page.Post.dataRequests store postId
 
-        UserRoute userId ->
-            Page.User.dataRequests store userId
+        UserRoute _ ->
+            Page.User.dataRequests
 
         NotFoundRoute ->
             []
