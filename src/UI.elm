@@ -33,4 +33,4 @@ redButton =
 
 code : String
 code =
-    "flex p-2 rounded border-2 border-slate-300 bg-slate-50"
+    "flex p-2 text-xs rounded border-2 border-slate-300 bg-slate-50 whitespace-pre-wrap"

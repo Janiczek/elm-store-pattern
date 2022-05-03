@@ -286,40 +286,50 @@ failureDetailsModalView _ =
     let
         url : String
         url =
-            "GET https://api.example.com/endpoint"
+            "POST https://api.example.com/endpoint"
 
         request : String
         request =
-            "TODO request body JSON"
+            """{
+    "title": "New post",
+    "authorId": "123",
+    "content": "Hello there!"
+}"""
 
         response : String
         response =
-            "TODO response body JSON"
+            """{
+    "error": "name_already_exists"
+}"""
 
         curl : String
         curl =
-            "TODO curl to copypaste"
+            """curl 'https://dash-staging.permutive.com/api/v1/iam/auth/resolve' \\
+    -X 'POST' \\
+    --data-binary '{ "title": "New post", "authorId": "123", "content": "Hello there!" }'"""
     in
-    Html.div
-        [ Attrs.class "absolute inset-20 z-20 p-2 border-2 border-orange-300 bg-orange-200 flex flex-col gap-2" ]
-        [ Html.p [] [ Html.text "Something went wrong... Please send this to our support:" ]
-        , Html.div []
-            [ Html.h3 [] [ Html.text "Endpoint:" ]
-            , Html.code [ Attrs.class UI.code ] [ Html.text url ]
+    Html.div [ Attrs.class "absolute inset-20 h-min z-20 flex flex-col border-2 border-orange-300 bg-orange-200" ]
+        [ Html.div
+            [ Attrs.class "p-2 flex flex-col gap-2 overflow-y-auto" ]
+            [ Html.p [] [ Html.text "Something went wrong... Please send this to our support:" ]
+            , Html.div []
+                [ Html.h3 [] [ Html.text "Endpoint:" ]
+                , Html.code [ Attrs.class UI.code ] [ Html.text url ]
+                ]
+            , Html.div []
+                [ Html.h3 [] [ Html.text "Request:" ]
+                , Html.code [ Attrs.class UI.code ] [ Html.text request ]
+                ]
+            , Html.div []
+                [ Html.h3 [] [ Html.text "Response:" ]
+                , Html.code [ Attrs.class UI.code ] [ Html.text response ]
+                ]
+            , Html.div []
+                [ Html.h3 [] [ Html.text "CURL:" ]
+                , Html.code [ Attrs.class UI.code ] [ Html.text curl ]
+                ]
             ]
-        , Html.div []
-            [ Html.h3 [] [ Html.text "Request:" ]
-            , Html.code [ Attrs.class UI.code ] [ Html.text request ]
-            ]
-        , Html.div []
-            [ Html.h3 [] [ Html.text "Response:" ]
-            , Html.code [ Attrs.class UI.code ] [ Html.text response ]
-            ]
-        , Html.div []
-            [ Html.h3 [] [ Html.text "CURL:" ]
-            , Html.code [ Attrs.class UI.code ] [ Html.text curl ]
-            ]
-        , Html.div [ Attrs.class "flex flex-row gap-2" ]
+        , Html.div [ Attrs.class "flex flex-row gap-2 p-2" ]
             [ Html.button
                 [ Events.onClick CopyFailureDetails
                 , Attrs.class UI.blueButton
