@@ -304,7 +304,7 @@ failureDetailsModalView _ =
 
         curl : String
         curl =
-            """curl 'https://dash-staging.permutive.com/api/v1/iam/auth/resolve' \\
+            """curl 'https://api.example.com/endpoint' \\
     -X 'POST' \\
     --data-binary '{ "title": "New post", "authorId": "123", "content": "Hello there!" }'"""
     in
