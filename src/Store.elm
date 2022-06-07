@@ -78,9 +78,9 @@ getUsers =
     let
         toastMsgs =
             { onFailure = "Failed to get users"
-                    , onSuccess = Nothing
-                    , onSent = Nothing
-                    }
+            , onSuccess = Nothing
+            , onSent = Nothing
+            }
     in
     { run =
         \store ->
@@ -104,12 +104,12 @@ getImage imageId =
     let
         toastMsgs =
             { onFailure =
-                        "Failed to get image '"
-                            ++ imageId
-                            ++ "'"
-                    , onSuccess = Nothing
-                    , onSent = Nothing
-                    }
+                "Failed to get image '"
+                    ++ imageId
+                    ++ "'"
+            , onSuccess = Nothing
+            , onSent = Nothing
+            }
     in
     { run =
         \store ->
@@ -144,10 +144,12 @@ createPost postCreateData =
                         ++ postCreateData.title
                         ++ "'"
                     )
-                , onSent =
-                    Just ("Creating post '"
+            , onSent =
+                Just
+                    ("Creating post '"
                         ++ postCreateData.title
-                        ++ "'")
+                        ++ "'"
+                    )
             }
     in
     { run =

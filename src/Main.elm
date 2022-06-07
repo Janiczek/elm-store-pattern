@@ -371,9 +371,12 @@ createToast toast =
 toastView : List (Attribute Msg) -> Toast.Info Toast -> Html Msg
 toastView attrs toast =
     (case toast.content of
-        StoreActionSent {onSent} ->
-            Maybe.map (UI.Toast.sent
-                { close = ToastMsg (Toast.exit toast.id) }) onSent
+        StoreActionSent { onSent } ->
+            Maybe.map
+                (UI.Toast.sent
+                    { close = ToastMsg (Toast.exit toast.id) }
+                )
+                onSent
 
         StoreActionSuccess { onSuccess } ->
             Maybe.map
