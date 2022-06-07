@@ -46,65 +46,66 @@ type alias ToastMsg =
     }
 
 
+base : Action
+base =
+    { run = \store -> ( store, Cmd.none )
+    , toastOnSent = Nothing
+    }
+
+
 getPosts : Action
 getPosts =
-    { run =
-        \store ->
-            if shouldSendRequest store.posts then
-                ( { store | posts = Loading }
-                , send
-                    "Failed to get posts"
-                    (\err s -> { s | posts = Failure err })
-                    API.Post.getAll
-                    GotPosts
-                )
+    { base
+        | run =
+            \store ->
+                if shouldSendRequest store.posts then
+                    ( { store | posts = Loading }
+                    , send "Failed to get posts"
+                        (\err s -> { s | posts = Failure err })
+                        API.Post.getAll
+                        GotPosts
+                    )
 
-            else
-                ( store, Cmd.none )
-    , toastOnSent = Nothing
+                else
+                    ( store, Cmd.none )
     }
 
 
 getUsers : Action
 getUsers =
-    { run =
-        \store ->
-            if shouldSendRequest store.users then
-                ( { store | users = Loading }
-                , send
-                    "Failed to get users"
-                    (\err s -> { s | users = Failure err })
-                    API.User.getAll
-                    GotUsers
-                )
+    { base
+        | run =
+            \store ->
+                if shouldSendRequest store.users then
+                    ( { store | users = Loading }
+                    , send "Failed to get users"
+                        (\err s -> { s | users = Failure err })
+                        API.User.getAll
+                        GotUsers
+                    )
 
-            else
-                ( store, Cmd.none )
-    , toastOnSent = Nothing
+                else
+                    ( store, Cmd.none )
     }
 
 
 getImage : ImageId -> Action
 getImage imageId =
-    { run =
-        \store ->
-            if shouldSendRequest_ (Dict.get imageId store.images) then
-                ( { store | images = Dict.insert imageId Loading store.images }
-                , send
-                    ("Failed to get image '"
-                        ++ imageId
-                        ++ "'"
+    { base
+        | run =
+            \store ->
+                if shouldSendRequest_ (Dict.get imageId store.images) then
+                    ( { store | images = Dict.insert imageId Loading store.images }
+                    , send ("Failed to get image '" ++ imageId ++ "'")
+                        (\err s ->
+                            { s | images = Dict.insert imageId (Failure err) store.images }
+                        )
+                        (API.Image.get imageId)
+                        GotImage
                     )
-                    (\err s ->
-                        { s | images = Dict.insert imageId (Failure err) store.images }
-                    )
-                    (API.Image.get imageId)
-                    GotImage
-                )
 
-            else
-                ( store, Cmd.none )
-    , toastOnSent = Nothing
+                else
+                    ( store, Cmd.none )
     }
 
 
@@ -113,26 +114,12 @@ createPost postCreateData =
     { run =
         \store ->
             ( store
-            , send
-                ("Failed to create post '"
-                    ++ postCreateData.title
-                    ++ "'"
-                )
+            , send ("Failed to create post '" ++ postCreateData.title ++ "'")
                 (\_ s -> s)
                 (API.Post.create postCreateData)
-                (CreatedPost
-                    ("Created post '"
-                        ++ postCreateData.title
-                        ++ "'"
-                    )
-                )
+                (CreatedPost ("Created post '" ++ postCreateData.title ++ "'"))
             )
-    , toastOnSent =
-        Just
-            ("Creating post '"
-                ++ postCreateData.title
-                ++ "'"
-            )
+    , toastOnSent = Just ("Creating post '" ++ postCreateData.title ++ "'")
     }
 
 

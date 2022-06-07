@@ -373,25 +373,21 @@ toastView attrs toast =
     (case toast.content of
         StoreActionSent onSent ->
             Maybe.map
-                (UI.Toast.sent
-                    { close = ToastMsg (Toast.exit toast.id) }
-                )
+                (UI.Toast.sent { close = ToastMsg (Toast.exit toast.id) })
                 onSent
 
         StoreActionSuccess onSuccess ->
             Maybe.map
-                (UI.Toast.success
-                    { close = ToastMsg (Toast.exit toast.id) }
-                )
+                (UI.Toast.success { close = ToastMsg (Toast.exit toast.id) })
                 onSuccess
 
         StoreActionFailure onFailure err ->
-            Just <|
-                UI.Toast.failure
-                    { close = ToastMsg (Toast.exit toast.id)
-                    , openDetails = OpenFailureDetails err
-                    }
-                    onFailure
+            UI.Toast.failure
+                { close = ToastMsg (Toast.exit toast.id)
+                , openDetails = OpenFailureDetails err
+                }
+                onFailure
+                |> Just
     )
         |> Maybe.map
             (\html ->
