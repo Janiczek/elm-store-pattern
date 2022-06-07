@@ -14,8 +14,8 @@ import UI
 
 dataRequests : List Store.Action
 dataRequests =
-    [ Store.GetPosts
-    , Store.GetUsers
+    [ Store.getPosts
+    , Store.getUsers
     ]
 
 

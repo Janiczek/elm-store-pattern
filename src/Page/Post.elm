@@ -17,8 +17,8 @@ dataRequests store postId =
     let
         staticRequests : List Store.Action
         staticRequests =
-            [ Store.GetPosts
-            , Store.GetUsers
+            [ Store.getPosts
+            , Store.getUsers
             ]
 
         dynamicRequests : List Store.Action
@@ -26,7 +26,7 @@ dataRequests store postId =
             RemoteData.get postId store.posts
                 |> RemoteData.map .imageIds
                 |> RemoteData.withDefault []
-                |> List.map Store.GetImage
+                |> List.map Store.getImage
     in
     staticRequests ++ dynamicRequests
 

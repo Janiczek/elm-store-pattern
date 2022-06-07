@@ -39,9 +39,9 @@ type alias Flags =
 
 
 type Toast
-    = StoreActionSent Store.Action
-    | StoreActionSuccess Store.Action
-    | StoreActionFailure Store.Action Http.Error
+    = StoreActionSent Store.ToastMsg
+    | StoreActionSuccess Store.ToastMsg
+    | StoreActionFailure Store.ToastMsg Http.Error
 
 
 type alias Model =
@@ -49,7 +49,7 @@ type alias Model =
     , route : Route
     , navKey : Browser.Navigation.Key
     , notifications : Toast.Tray Toast
-    , failureDetailsModal : Maybe ( Store.Action, Http.Error )
+    , failureDetailsModal : Maybe Http.Error
     }
 
 
@@ -59,7 +59,7 @@ type Msg
     | UrlChanged Url
     | UrlRequested Browser.UrlRequest
     | CreatePost PostCreateData
-    | OpenFailureDetails Store.Action Http.Error
+    | OpenFailureDetails Http.Error
     | CloseFailureDetails
     | CopyFailureDetails
 
@@ -92,8 +92,7 @@ sendDataRequest : Store.Action -> Model -> ( Model, Cmd Msg )
 sendDataRequest request model =
     let
         ( newStore, storeCmd ) =
-            model.store
-                |> Store.runAction request
+            request.run model.store
     in
     ( { model | store = newStore }
     , Cmd.map StoreMsg storeCmd
@@ -114,8 +113,8 @@ sendDataRequests requests model =
 storeMsgToast : Store.Msg -> Maybe Toast
 storeMsgToast storeMsg =
     case storeMsg of
-        Store.HttpError action err ->
-            Just (StoreActionFailure action err)
+        Store.HttpError toastMsg err _ ->
+            Just (StoreActionFailure toastMsg err)
 
         Store.GotPosts _ ->
             Nothing
@@ -126,8 +125,8 @@ storeMsgToast storeMsg =
         Store.GotImage _ ->
             Nothing
 
-        Store.CreatedPost action _ ->
-            Just (StoreActionSuccess action)
+        Store.CreatedPost toastMsg _ ->
+            Just (StoreActionSuccess toastMsg)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -188,14 +187,14 @@ update msg model =
             let
                 request : Store.Action
                 request =
-                    Store.CreatePost data
+                    Store.createPost data
             in
             model
                 |> sendDataRequest request
-                |> Cmd.andThen (addToast (StoreActionSent request))
+                |> Cmd.andThen (addToast (StoreActionSent request.toastMsgs))
 
-        OpenFailureDetails action err ->
-            ( { model | failureDetailsModal = Just ( action, err ) }
+        OpenFailureDetails err ->
+            ( { model | failureDetailsModal = Just err }
             , Cmd.none
             )
 
@@ -281,7 +280,7 @@ view model =
     }
 
 
-failureDetailsModalView : ( Store.Action, Http.Error ) -> Html Msg
+failureDetailsModalView : Http.Error -> Html Msg
 failureDetailsModalView _ =
     let
         url : String
@@ -304,9 +303,8 @@ failureDetailsModalView _ =
 
         curl : String
         curl =
-            """curl 'https://api.example.com/endpoint' \\
-    -X 'POST' \\
-    --data-binary '{ "title": "New post", "authorId": "123", "content": "Hello there!" }'"""
+            """curl 'https://api.example.com/endpoint' -X 'POST' data-binary '{ "title": "New post", "authorId": "123", "content": "Hello there!" }'
+"""
     in
     Html.div [ Attrs.class "absolute inset-20 h-min z-20 flex flex-col border-2 border-orange-300 bg-orange-200" ]
         [ Html.div
@@ -373,77 +371,29 @@ createToast toast =
 toastView : List (Attribute Msg) -> Toast.Info Toast -> Html Msg
 toastView attrs toast =
     (case toast.content of
-        StoreActionSent action ->
-            case action of
-                Store.GetPosts ->
-                    Nothing
+        StoreActionSent {onSent} ->
+            Maybe.map (UI.Toast.sent
+                { close = ToastMsg (Toast.exit toast.id) }) onSent
 
-                Store.GetUsers ->
-                    Nothing
+        StoreActionSuccess { onSuccess } ->
+            Maybe.map
+                (UI.Toast.success
+                    { close = ToastMsg (Toast.exit toast.id) }
+                )
+                onSuccess
 
-                Store.GetImage _ ->
-                    Nothing
-
-                Store.CreatePost post ->
-                    Just <|
-                        UI.Toast.sent
-                            { close = ToastMsg (Toast.exit toast.id) }
-                            ("Creating post '"
-                                ++ post.title
-                                ++ "'"
-                            )
-
-        StoreActionSuccess action ->
-            case action of
-                Store.GetPosts ->
-                    Nothing
-
-                Store.GetUsers ->
-                    Nothing
-
-                Store.GetImage _ ->
-                    Nothing
-
-                Store.CreatePost post ->
-                    Just <|
-                        UI.Toast.success
-                            { close = ToastMsg (Toast.exit toast.id) }
-                            ("Created post '"
-                                ++ post.title
-                                ++ "'"
-                            )
-
-        StoreActionFailure action err ->
+        StoreActionFailure { onFailure } err ->
             let
                 failure : String -> Maybe (Html Msg)
                 failure message =
                     Just <|
                         UI.Toast.failure
                             { close = ToastMsg (Toast.exit toast.id)
-                            , openDetails = OpenFailureDetails action err
+                            , openDetails = OpenFailureDetails err
                             }
                             message
             in
-            case action of
-                Store.GetPosts ->
-                    failure "Failed to get posts"
-
-                Store.GetUsers ->
-                    failure "Failed to get users"
-
-                Store.GetImage id ->
-                    failure
-                        ("Failed to get image '"
-                            ++ id
-                            ++ "'"
-                        )
-
-                Store.CreatePost post ->
-                    failure
-                        ("Failed to create post '"
-                            ++ post.title
-                            ++ "'"
-                        )
+            failure onFailure
     )
         |> Maybe.map
             (\html ->
