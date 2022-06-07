@@ -1,14 +1,13 @@
 module Store exposing
     ( Store, init
-    , Action(..), runAction
-    , Msg(..), update
+    , Action, Msg(..), update
+    , ToastMsg, createPost, getImage, getPosts, getUsers
     )
 
 {-|
 
 @docs Store, init
-@docs Action, runAction
-@docs Msg, update
+@docs Action, Msg, update
 
 -}
 
@@ -35,21 +34,103 @@ type alias Store =
 
 {-| As in, Request
 -}
-type Action
-    = GetPosts
-    | GetUsers
-    | GetImage ImageId
-    | CreatePost PostCreateData
+type alias Action =
+    { run : Store -> ( Store, Cmd Msg )
+    , toastOnSent : Maybe String
+    }
+
+
+type alias ToastMsg =
+    { onFailure : String
+    , onSuccess : Maybe String
+    }
+
+
+base : Action
+base =
+    { run = \store -> ( store, Cmd.none )
+    , toastOnSent = Nothing
+    }
+
+
+getPosts : Action
+getPosts =
+    { base
+        | run =
+            \store ->
+                if shouldSendRequest store.posts then
+                    ( { store | posts = Loading }
+                    , send "Failed to get posts"
+                        (\err s -> { s | posts = Failure err })
+                        API.Post.getAll
+                        GotPosts
+                    )
+
+                else
+                    ( store, Cmd.none )
+    }
+
+
+getUsers : Action
+getUsers =
+    { base
+        | run =
+            \store ->
+                if shouldSendRequest store.users then
+                    ( { store | users = Loading }
+                    , send "Failed to get users"
+                        (\err s -> { s | users = Failure err })
+                        API.User.getAll
+                        GotUsers
+                    )
+
+                else
+                    ( store, Cmd.none )
+    }
+
+
+getImage : ImageId -> Action
+getImage imageId =
+    { base
+        | run =
+            \store ->
+                if shouldSendRequest_ (Dict.get imageId store.images) then
+                    ( { store | images = Dict.insert imageId Loading store.images }
+                    , send ("Failed to get image '" ++ imageId ++ "'")
+                        (\err s ->
+                            { s | images = Dict.insert imageId (Failure err) store.images }
+                        )
+                        (API.Image.get imageId)
+                        GotImage
+                    )
+
+                else
+                    ( store, Cmd.none )
+    }
+
+
+createPost : PostCreateData -> Action
+createPost postCreateData =
+    { run =
+        \store ->
+            ( store
+            , send ("Failed to create post '" ++ postCreateData.title ++ "'")
+                (\_ s -> s)
+                (API.Post.create postCreateData)
+                (CreatedPost ("Created post '" ++ postCreateData.title ++ "'"))
+            )
+    , toastOnSent = Just ("Creating post '" ++ postCreateData.title ++ "'")
+    }
 
 
 {-| As in, Response
 -}
 type Msg
-    = HttpError Action Http.Error -- !
+    = HttpError String Http.Error (Store -> Store) -- !
     | GotPosts (List Post)
     | GotUsers (List User)
     | GotImage Image
-    | CreatedPost Action Post
+    | CreatedPost String Post
 
 
 init : Store
@@ -58,42 +139,6 @@ init =
     , users = NotAsked
     , images = Dict.empty
     }
-
-
-runAction : Action -> Store -> ( Store, Cmd Msg )
-runAction action store =
-    case action of
-        GetPosts ->
-            if shouldSendRequest store.posts then
-                ( { store | posts = Loading }
-                , send action API.Post.getAll GotPosts
-                )
-
-            else
-                ( store, Cmd.none )
-
-        GetUsers ->
-            if shouldSendRequest store.users then
-                ( { store | users = Loading }
-                , send action API.User.getAll GotUsers
-                )
-
-            else
-                ( store, Cmd.none )
-
-        GetImage imageId ->
-            if shouldSendRequest_ (Dict.get imageId store.images) then
-                ( { store | images = Dict.insert imageId Loading store.images }
-                , send action (API.Image.get imageId) GotImage
-                )
-
-            else
-                ( store, Cmd.none )
-
-        CreatePost postCreateData ->
-            ( store
-            , send action (API.Post.create postCreateData) (CreatedPost action)
-            )
 
 
 shouldSendRequest : WebData a -> Bool
@@ -122,13 +167,13 @@ shouldSendRequest_ maybeWebdata =
             shouldSendRequest webdata
 
 
-send : Action -> ((Result Http.Error a -> Msg) -> Cmd Msg) -> (a -> Msg) -> Cmd Msg
-send action toCmd toSuccessMsg =
+send : String -> (Http.Error -> Store -> Store) -> ((Result Http.Error a -> Msg) -> Cmd Msg) -> (a -> Msg) -> Cmd Msg
+send toasts onErr toCmd toSuccessMsg =
     toCmd
         (\result ->
             case result of
                 Err err ->
-                    HttpError action err
+                    HttpError toasts err (onErr err)
 
                 Ok success ->
                     toSuccessMsg success
@@ -158,26 +203,10 @@ update msg store =
             , Cmd.none
             )
 
-        HttpError action error ->
-            ( saveFailure action error store
+        HttpError _ _ saveFailure ->
+            ( saveFailure store
             , Cmd.none
             )
-
-
-saveFailure : Action -> Http.Error -> Store -> Store
-saveFailure action err store =
-    case action of
-        GetPosts ->
-            { store | posts = Failure err }
-
-        GetUsers ->
-            { store | users = Failure err }
-
-        GetImage imageId ->
-            { store | images = Dict.insert imageId (Failure err) store.images }
-
-        CreatePost _ ->
-            store
 
 
 dictByIds : List { a | id : String } -> Dict String { a | id : String }

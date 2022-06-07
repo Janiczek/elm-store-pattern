@@ -11,7 +11,7 @@ import UI
 
 dataRequests : List Store.Action
 dataRequests =
-    [ Store.GetUsers ]
+    [ Store.getUsers ]
 
 
 view : Store -> UserId -> Html msg
