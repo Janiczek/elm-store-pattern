@@ -39,9 +39,9 @@ type alias Flags =
 
 
 type Toast
-    = StoreActionSent Store.ToastMsg
-    | StoreActionSuccess Store.ToastMsg
-    | StoreActionFailure Store.ToastMsg Http.Error
+    = StoreActionSent (Maybe String)
+    | StoreActionSuccess (Maybe String)
+    | StoreActionFailure String Http.Error
 
 
 type alias Model =
@@ -126,7 +126,7 @@ storeMsgToast storeMsg =
             Nothing
 
         Store.CreatedPost toastMsg _ ->
-            Just (StoreActionSuccess toastMsg)
+            Just (StoreActionSuccess (Just toastMsg))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -191,7 +191,7 @@ update msg model =
             in
             model
                 |> sendDataRequest request
-                |> Cmd.andThen (addToast (StoreActionSent request.toastMsgs))
+                |> Cmd.andThen (addToast (StoreActionSent request.toastOnSent))
 
         OpenFailureDetails err ->
             ( { model | failureDetailsModal = Just err }
@@ -371,32 +371,27 @@ createToast toast =
 toastView : List (Attribute Msg) -> Toast.Info Toast -> Html Msg
 toastView attrs toast =
     (case toast.content of
-        StoreActionSent { onSent } ->
+        StoreActionSent onSent ->
             Maybe.map
                 (UI.Toast.sent
                     { close = ToastMsg (Toast.exit toast.id) }
                 )
                 onSent
 
-        StoreActionSuccess { onSuccess } ->
+        StoreActionSuccess onSuccess ->
             Maybe.map
                 (UI.Toast.success
                     { close = ToastMsg (Toast.exit toast.id) }
                 )
                 onSuccess
 
-        StoreActionFailure { onFailure } err ->
-            let
-                failure : String -> Maybe (Html Msg)
-                failure message =
-                    Just <|
-                        UI.Toast.failure
-                            { close = ToastMsg (Toast.exit toast.id)
-                            , openDetails = OpenFailureDetails err
-                            }
-                            message
-            in
-            failure onFailure
+        StoreActionFailure onFailure err ->
+            Just <|
+                UI.Toast.failure
+                    { close = ToastMsg (Toast.exit toast.id)
+                    , openDetails = OpenFailureDetails err
+                    }
+                    onFailure
     )
         |> Maybe.map
             (\html ->

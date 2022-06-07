@@ -36,32 +36,24 @@ type alias Store =
 -}
 type alias Action =
     { run : Store -> ( Store, Cmd Msg )
-    , toastMsgs : ToastMsg
+    , toastOnSent : Maybe String
     }
 
 
 type alias ToastMsg =
     { onFailure : String
     , onSuccess : Maybe String
-    , onSent : Maybe String
     }
 
 
 getPosts : Action
 getPosts =
-    let
-        toastMsgs =
-            { onFailure = "Failed to get posts"
-            , onSuccess = Nothing
-            , onSent = Nothing
-            }
-    in
     { run =
         \store ->
             if shouldSendRequest store.posts then
                 ( { store | posts = Loading }
                 , send
-                    toastMsgs
+                    "Failed to get posts"
                     (\err s -> { s | posts = Failure err })
                     API.Post.getAll
                     GotPosts
@@ -69,25 +61,18 @@ getPosts =
 
             else
                 ( store, Cmd.none )
-    , toastMsgs = toastMsgs
+    , toastOnSent = Nothing
     }
 
 
 getUsers : Action
 getUsers =
-    let
-        toastMsgs =
-            { onFailure = "Failed to get users"
-            , onSuccess = Nothing
-            , onSent = Nothing
-            }
-    in
     { run =
         \store ->
             if shouldSendRequest store.users then
                 ( { store | users = Loading }
                 , send
-                    toastMsgs
+                    "Failed to get users"
                     (\err s -> { s | users = Failure err })
                     API.User.getAll
                     GotUsers
@@ -95,28 +80,21 @@ getUsers =
 
             else
                 ( store, Cmd.none )
-    , toastMsgs = toastMsgs
+    , toastOnSent = Nothing
     }
 
 
 getImage : ImageId -> Action
 getImage imageId =
-    let
-        toastMsgs =
-            { onFailure =
-                "Failed to get image '"
-                    ++ imageId
-                    ++ "'"
-            , onSuccess = Nothing
-            , onSent = Nothing
-            }
-    in
     { run =
         \store ->
             if shouldSendRequest_ (Dict.get imageId store.images) then
                 ( { store | images = Dict.insert imageId Loading store.images }
                 , send
-                    toastMsgs
+                    ("Failed to get image '"
+                        ++ imageId
+                        ++ "'"
+                    )
                     (\err s ->
                         { s | images = Dict.insert imageId (Failure err) store.images }
                     )
@@ -126,53 +104,46 @@ getImage imageId =
 
             else
                 ( store, Cmd.none )
-    , toastMsgs = toastMsgs
+    , toastOnSent = Nothing
     }
 
 
 createPost : PostCreateData -> Action
 createPost postCreateData =
-    let
-        toastMsgs =
-            { onFailure =
-                "Failed to create post '"
-                    ++ postCreateData.title
-                    ++ "'"
-            , onSuccess =
-                Just
-                    ("Created post '"
-                        ++ postCreateData.title
-                        ++ "'"
-                    )
-            , onSent =
-                Just
-                    ("Creating post '"
-                        ++ postCreateData.title
-                        ++ "'"
-                    )
-            }
-    in
     { run =
         \store ->
             ( store
             , send
-                toastMsgs
+                ("Failed to create post '"
+                    ++ postCreateData.title
+                    ++ "'"
+                )
                 (\_ s -> s)
                 (API.Post.create postCreateData)
-                (CreatedPost toastMsgs)
+                (CreatedPost
+                    ("Created post '"
+                        ++ postCreateData.title
+                        ++ "'"
+                    )
+                )
             )
-    , toastMsgs = toastMsgs
+    , toastOnSent =
+        Just
+            ("Creating post '"
+                ++ postCreateData.title
+                ++ "'"
+            )
     }
 
 
 {-| As in, Response
 -}
 type Msg
-    = HttpError ToastMsg Http.Error (Store -> Store) -- !
+    = HttpError String Http.Error (Store -> Store) -- !
     | GotPosts (List Post)
     | GotUsers (List User)
     | GotImage Image
-    | CreatedPost ToastMsg Post
+    | CreatedPost String Post
 
 
 init : Store
@@ -209,7 +180,7 @@ shouldSendRequest_ maybeWebdata =
             shouldSendRequest webdata
 
 
-send : ToastMsg -> (Http.Error -> Store -> Store) -> ((Result Http.Error a -> Msg) -> Cmd Msg) -> (a -> Msg) -> Cmd Msg
+send : String -> (Http.Error -> Store -> Store) -> ((Result Http.Error a -> Msg) -> Cmd Msg) -> (a -> Msg) -> Cmd Msg
 send toasts onErr toCmd toSuccessMsg =
     toCmd
         (\result ->
